@@ -1,5 +1,5 @@
 import { questionsFor, summaryFor } from './flags';
-import { explainWithMuse, museConfigured, questionsWithMuse, summarizeWithMuse, verifyWithMuse } from './muse';
+import { explainWithMuse, questionsWithMuse, summarizeWithMuse, verifyWithMuse } from './muse';
 import { redactForMuse } from './safety';
 import type { LabRow } from './types';
 
@@ -13,15 +13,12 @@ export interface Enhancement {
 }
 
 /**
- * Runs every Muse job in parallel. Each job is independent and optional: a slow, failed or invalid
- * response just means that part keeps its deterministic template. Flags, values, units and ranges are
- * never touched here.
+ * Runs every Muse job in parallel. A sentence that Muse got wrong, or that fails the safety check, is
+ * replaced by the code-written template. Flags, values, units and ranges are never touched here.
  */
 export async function enhanceWithMuse(rows: LabRow[], opts: { sourceText?: string } = {}): Promise<Enhancement> {
   const baseSummary = summaryFor(rows);
   const baseQuestions = questionsFor(rows);
-  if (!museConfigured()) return { rows, summary: baseSummary, questions: baseQuestions, features: [], flaggedByMuse: [] };
-
   const [explain, summary, questions, check] = await Promise.allSettled([
     explainWithMuse(rows),
     summarizeWithMuse(rows),
@@ -29,7 +26,7 @@ export async function enhanceWithMuse(rows: LabRow[], opts: { sourceText?: strin
     opts.sourceText ? verifyWithMuse(redactForMuse(opts.sourceText), rows) : Promise.resolve([] as string[]),
   ]);
   const features: string[] = [];
-  const log = (what: string, r: PromiseRejectedResult) => console.error(`Muse ${what} fell back to the template:`, r.reason instanceof Error ? r.reason.message : r.reason);
+  const log = (what: string, r: PromiseRejectedResult) => console.error(`Muse ${what} failed:`, r.reason instanceof Error ? r.reason.message : r.reason);
 
   let out = rows;
   if (explain.status === 'fulfilled') {

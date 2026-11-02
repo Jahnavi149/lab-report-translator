@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     if (kind === 'pdf') {
       const text = await extractPdfText(buffer);
       const parsed = parseLabTextDetailed(text);
-      if (parsed.rows.length === 0) return fail('No lab results could be read from this file. If it is a scan or photo, upload it as an image instead, or try a sample report.');
+      if (parsed.rows.length === 0) return fail('No lab results could be read from this file. If it is a scan or photo, upload it as an image instead, or try the example report.');
       const verification = verifyRows(parsed.rows, text);
       const enhanced = await enhanceWithMuse(verification.rows, { sourceText: text });
       const museNote = enhanced.flaggedByMuse.length > 0 ? ` Muse's second check also could not confirm: ${enhanced.flaggedByMuse.join(', ')}.` : '';
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         skipped_lines: parsed.skipped.slice(0, 10),
       };
     } else {
-      if (!museConfigured()) return fail('Reading photos needs Muse Spark. Add META_MODEL_API_KEY to .env.local (or your hosting settings) and restart. Digital PDFs and sample reports work without a key.');
+      if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);
       if (rateLimited(req, 'vision', 10)) return fail('Too many photo uploads from this connection. Please wait a few minutes and try again.', 429);
       const vision = await extractFromImageWithMuse(buffer, `image/${kind}`);
       if (vision.length === 0) return fail('No lab results could be read from this photo. Try a flatter, brighter, closer photo, or upload a digital PDF.');
@@ -87,6 +87,6 @@ export async function POST(req: Request) {
     return NextResponse.json(report);
   } catch (e) {
     console.error('Analyze failed:', e instanceof Error ? e.message : e);
-    return fail('Something went wrong reading that file. Please try again, or try a sample report.', 500);
+    return fail('Something went wrong reading that file. Please try again, or try the example report.', 500);
   }
 }

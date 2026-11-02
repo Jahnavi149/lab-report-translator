@@ -32,7 +32,7 @@ export interface Verification {
 }
 
 export function verifyRows(rows: LabRow[], sourceText: string): Verification {
-  if (rows.length === 0) return { passed: false, note: 'No results were extracted. Please try a clearer file or a sample report.', rows };
+  if (rows.length === 0) return { passed: false, note: 'No results were extracted. Please try a clearer file or the example report.', rows };
   const normalized = sourceText.replace(/[–—−]/g, '-').split(/\r?\n/).map((l) => l.trim().replace(/\s+/g, ' ')).join('\n');
   const failed: string[] = [];
   const out = rows.map((row) => {

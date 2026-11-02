@@ -37,7 +37,7 @@ export interface LabReport {
   skipped_lines?: string[];
 }
 
-/** Muse translation, item by item. A null item failed validation and is replaced by the built-in template. */
+/** Muse translation, item by item. A null item failed validation and stays in English. */
 export interface TranslatedReport {
   summary: (string | null)[];
   questions: (string | null)[];

@@ -1,6 +1,6 @@
 {
-  "passed": 286,
-  "total": 286,
+  "passed": 226,
+  "total": 226,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -33,25 +33,20 @@
       "total": 21
     },
     {
-      "name": "Built-in translations (no key needed)",
-      "passed": 49,
-      "total": 49
-    },
-    {
-      "name": "Samples and compare",
-      "passed": 18,
-      "total": 18
+      "name": "Sample fixtures and plain-English templates",
+      "passed": 14,
+      "total": 14
     },
     {
       "name": "Localized interface, sharing and handout",
-      "passed": 27,
-      "total": 27
+      "passed": 21,
+      "total": 21
     },
     {
-      "name": "Muse pipeline against a mocked Meta API (no key, no network)",
-      "passed": 36,
-      "total": 36
+      "name": "Muse pipeline against a mocked Meta API (no network)",
+      "passed": 35,
+      "total": 35
     }
   ],
-  "generated_at": "2026-11-02T03:47:04.310Z"
+  "generated_at": "2026-11-02T04:16:21.013Z"
 }

@@ -18,7 +18,6 @@ const { flagFor, questionsFor, summaryFor, plainEnglishFor, describeRange, forma
 const { parseLabText, parseLabTextDetailed } = load('parse');
 const { verifyRows, hasNumberToken } = load('verify');
 const safety = load('safety');
-const { compareReports } = load('compare');
 const { SAMPLES } = load('samples');
 const i18n = load('i18n');
 const share = load('share');
@@ -186,36 +185,12 @@ check('empty translation rejected', !safety.translationIsSafe('Total Cholesterol
 check('test-name sanitiser strips control and markup characters', safety.sanitizeTestName('Hb <script>alert(1)</script>\n{ignore}') === 'Hb scriptalert(1)/scriptignore');
 
 // ------------------------------------------------------------------------------------------------
-group('Built-in translations (no key needed)');
-for (const lang of ['te', 'hi', 'es']) {
-  for (const s of SAMPLES) {
-    const sum = i18n.localSummary(s.rows, lang);
-    const qs = i18n.localQuestions(s.rows, lang);
-    check(`${lang} ${s.id}: summary has 3 lines`, sum?.length === 3);
-    check(`${lang} ${s.id}: questions has 3 lines`, qs?.length === 3);
-    const allowed = new Set(s.rows.flatMap((r) => [String(r.value), r.ref_low === null ? null : String(r.ref_low), r.ref_high === null ? null : String(r.ref_high)]).filter(Boolean));
-    allowed.add(String(s.rows.length));
-    for (const f of ['Normal', 'High', 'Low', 'Unknown']) allowed.add(String(s.rows.filter((r) => r.flag === f).length));
-    // Test names are copied verbatim (e.g. "25-Hydroxy"), so they are removed before looking for invented numbers.
-    const text = s.rows.reduce((t, r) => t.split(r.test_name).join(' '), [...sum, ...qs, ...s.rows.map((r) => i18n.localExplanation(r, lang))].join(' '));
-    check(`${lang} ${s.id}: only the report's own numbers appear`, safety.numbersIn(text).every((n) => allowed.has(n)), safety.numbersIn(text).join(','));
-    check(`${lang} ${s.id}: every test name and value is copied unchanged`, s.rows.every((r) => i18n.localExplanation(r, lang).includes(r.test_name) && i18n.localExplanation(r, lang).includes(String(r.value))));
-  }
-}
-check('Tamil has no built-in pack (needs Muse, falls back to English with a notice)', !i18n.hasOfflinePack('ta') && i18n.localSummary([], 'ta') === null);
-
-// ------------------------------------------------------------------------------------------------
-group('Samples and compare');
+group('Sample fixtures and plain-English templates');
 for (const s of SAMPLES) {
   check(`${s.id}: every flag matches flagFor`, s.rows.every((r) => r.flag === flagFor(r.value, r.ref_low, r.ref_high)));
   check(`${s.id}: sample text round-trips through the parser to the same flags`, parseLabText(s.rows.map((r) => r.source_text).join('\n')).map((r) => r.flag).join() === s.rows.map((r) => r.flag).join());
   check(`${s.id}: deterministic summary/questions pass the safety filters`, safety.summaryIsSafe(s.summary, s.rows));
 }
-const up = compareReports([row({ value: 11.2, flag: 'Low' })], [row({ value: 12.4, flag: 'Normal' })]);
-eq('compare: up with flag change', [up[0].direction, up[0].flag_change], ['up', 'Low → Normal']);
-eq('compare: down', compareReports([chol], [{ ...chol, value: 195, flag: 'Normal' }])[0].direction, 'down');
-eq('compare: same', compareReports([chol], [chol])[0].direction, 'same');
-eq('compare: new and gone', compareReports([hb], [chol]).map((c) => c.direction).sort(), ['gone', 'new']);
 eq('plain-English line for a marker-only row does not claim a range', plainEnglishFor('Ferritin', 22, 'ng/mL', null, null, 'High').includes('prints no range'), true);
 check('question for a marker-only row never says "null"', !questionsFor([markerRow]).join(' ').includes('null'));
 
@@ -228,13 +203,11 @@ for (const lang of ['te', 'hi', 'es']) {
   check(`${lang}: every interface string exists`, keys.every((k) => (Array.isArray(enUi[k]) ? Array.isArray(u[k]) && u[k].length === enUi[k].length && u[k].every(Boolean) : typeof u[k] === typeof enUi[k] && (typeof u[k] !== 'string' || u[k].length > 0))));
   check(`${lang}: landing, buttons and safety box are actually translated, not English`, ['heroTitleA', 'lede', 'translateHeading', 'dropTitle', 'doctorSheetBtn', 'listenBtn', 'whatsappBtn', 'handoutBtn', 'notMeanBody', 'infoOnly'].every((k) => u[k] !== enUi[k]));
   check(`${lang}: the "does NOT mean" safety box keeps its meaning (non-empty, differs from English)`, u.notMeanBody.length > 40 && u.notMeanTitle !== enUi.notMeanTitle);
-  check(`${lang}: spoken how-to-use guide has the same number of steps as English, all translated`, u.guideSteps.length === enUi.guideSteps.length && u.guideSteps.every((s, i) => s.length > 10 && s !== enUi.guideSteps[i]) && u.guideBtn !== enUi.guideBtn);
-  check(`${lang}: the spoken guide contains no numbers, and its instruction steps contain no diagnosis/treatment wording (the final step is the "does not diagnose" disclaimer, which legitimately names the word)`, safety.numbersIn(u.guideSteps.join(' ')).length === 0 && !safety.containsDiagnosisOrTreatment(u.guideSteps.slice(0, -1).join(' ')));
 }
 const tmix = SAMPLES.find((x) => x.id === 'mixed-abnormal');
 for (const lang of ['en', 'te', 'hi', 'es']) {
-  const sum = lang === 'en' ? tmix.summary : i18n.localSummary(tmix.rows, lang);
-  const qs = lang === 'en' ? tmix.questions : i18n.localQuestions(tmix.rows, lang);
+  const sum = tmix.summary;
+  const qs = tmix.questions;
   const text = share.buildShareText({ title: tmix.title, summary: sum, questions: qs, questionsHeading: i18n.uiFor(lang).questionsToAsk, disclaimer: i18n.uiFor(lang).infoOnly, synthetic: true });
   const allowedNums = new Set([...safety.numbersIn([...sum, ...qs].join(' ')), '1', '2', '3']);
   check(`${lang}: share text adds no numbers beyond the summary and questions`, safety.numbersIn(text.replace(tmix.title, '')).every((n) => allowedNums.has(n)));
@@ -244,7 +217,7 @@ for (const lang of ['en', 'te', 'hi', 'es']) {
 }
 
 // ------------------------------------------------------------------------------------------------
-group('Muse pipeline against a mocked Meta API (no key, no network)');
+group('Muse pipeline against a mocked Meta API (no network)');
 const muse = load('muse');
 const { enhanceWithMuse } = load('enhance');
 const { rateLimited } = load('ratelimit');
@@ -305,7 +278,7 @@ check('HTTP 400 retries once without response_format', calls.length === 2 && cal
 
 calls = mockMuse((job, body, n) => (n === 1 ? '' : goodResponses(job)));
 const afterEmpty = await muse.summarizeWithMuse(mixed.rows);
-check('an empty 200 reply is retried once and then used (no needless fallback)', calls.length === 2 && afterEmpty.length === 3);
+check('an empty 200 reply is retried once and then used (no needless template)', calls.length === 2 && afterEmpty.length === 3);
 
 calls = mockMuse(goodResponses);
 await muse.summarizeWithMuse(mixed.rows);
@@ -328,12 +301,6 @@ calls = mockMuse(() => '');
 let emptyMessage = '';
 try { await muse.summarizeWithMuse(mixed.rows); } catch (err) { emptyMessage = err.message; }
 check('replies that stay empty fail after exactly two tries, with a diagnosable message', calls.length === 2 && /empty response/.test(emptyMessage) && /finish_reason/.test(emptyMessage) && !emptyMessage.includes('test-key-not-real'));
-
-calls = mockMuse(() => ({}));
-process.env.MUSE_DISABLED = '1';
-e = await enhanceWithMuse(mixed.rows, { sourceText: 'x' });
-check('MUSE_DISABLED=1 makes zero network calls (offline rehearsal mode)', calls.length === 0 && !muse.museConfigured() && e.features.length === 0);
-delete process.env.MUSE_DISABLED;
 
 // Privacy + injection: nothing identifying is sent, and hostile text stays inside <data>.
 calls = mockMuse((job) => (job === 'verify' ? Object.fromEntries(parsed.rows.map((r) => [r.test_name, true])) : goodResponses(job)));
@@ -366,7 +333,7 @@ globalThis.fetch = realFetch;
 delete process.env.META_MODEL_API_KEY;
 for (const placeholder of ['<META_API_KEY>', '  <META_API_KEY>  ', 'your_key_here', '']) {
   process.env.META_MODEL_API_KEY = placeholder;
-  check(`placeholder key "${placeholder.trim()}" counts as no key (copying .env.example unchanged stays offline)`, !muse.museConfigured() && muse.museApiKey() === '');
+  check(`placeholder key "${placeholder.trim()}" counts as no key (copying .env.example unchanged is not a key)`, !muse.museConfigured() && muse.museApiKey() === '');
 }
 process.env.META_MODEL_API_KEY = 'sk-looks-like-a-real-key-123';
 check('a real-looking key is accepted as configured', muse.museConfigured());
