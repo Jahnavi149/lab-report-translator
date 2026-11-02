@@ -11,14 +11,13 @@ interface Props {
   summary: string[];
   questions: string[];
   flagged: LabRow[];
-  recheckDate: string;
   onBack: () => void;
   onClear: () => void;
 }
 
 // Left column: the family's language. Right column: English clinical values for the doctor.
 // Everything printed here is either copied from the report or a question for the doctor, never an answer.
-export function DoctorSheet({ report, language, summary, questions, flagged, recheckDate, onBack, onClear }: Props) {
+export function DoctorSheet({ report, language, summary, questions, flagged, onBack, onClear }: Props) {
   const ui = uiFor(language);
   return (
     <section className="card fade">
@@ -57,7 +56,6 @@ export function DoctorSheet({ report, language, summary, questions, flagged, rec
         <li>☐ {ui.bringSheet}</li>
         <li>☐ {ui.bringMeds}</li>
         <li>☐ {ui.bringPrevious}</li>
-        {recheckDate && <li>☐ {ui.recheck}: {recheckDate}</li>}
       </ul>
       <h3>{ui.doctorAnswers}</h3>
       <p className="lines">________________________________________________________________________</p>

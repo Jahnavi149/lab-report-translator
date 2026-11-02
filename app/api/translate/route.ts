@@ -10,7 +10,7 @@ const isStringArray = (v: unknown, max: number): v is string[] => Array.isArray(
 
 export async function POST(req: Request) {
   try {
-    if (!museConfigured()) return NextResponse.json({ error: 'Muse is not configured. Built-in translations are used where available.' }, { status: 501 });
+    if (!museConfigured()) return NextResponse.json({ error: 'Translation is not available.' }, { status: 501 });
     if (rateLimited(req, 'translate', 30)) return NextResponse.json({ error: 'Too many translation requests. Please wait a few minutes.' }, { status: 429 });
     const raw = await req.text();
     if (raw.length > 30000) return NextResponse.json({ error: 'Request too large.' }, { status: 413 });
@@ -25,6 +25,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ...translated, muse_used: true });
   } catch (e) {
     console.error('Translate failed:', e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: 'Translation failed. Built-in translations are used where available.' }, { status: 502 });
+    return NextResponse.json({ error: 'Translation failed.' }, { status: 502 });
   }
 }
