@@ -1,0 +1,57 @@
+{
+  "passed": 286,
+  "total": 286,
+  "groups": [
+    {
+      "name": "Flag engine (code decides)",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "name": "Parser on realistic report lines",
+      "passed": 66,
+      "total": 66
+    },
+    {
+      "name": "Verifier (per row, honest)",
+      "passed": 7,
+      "total": 7
+    },
+    {
+      "name": "Real PDF end to end (public/sample-report.pdf)",
+      "passed": 22,
+      "total": 22
+    },
+    {
+      "name": "AI output safety: explanations",
+      "passed": 22,
+      "total": 22
+    },
+    {
+      "name": "AI output safety: summary, questions, translation",
+      "passed": 21,
+      "total": 21
+    },
+    {
+      "name": "Built-in translations (no key needed)",
+      "passed": 49,
+      "total": 49
+    },
+    {
+      "name": "Samples and compare",
+      "passed": 18,
+      "total": 18
+    },
+    {
+      "name": "Localized interface, sharing and handout",
+      "passed": 27,
+      "total": 27
+    },
+    {
+      "name": "Muse pipeline against a mocked Meta API (no key, no network)",
+      "passed": 36,
+      "total": 36
+    }
+  ],
+  "generated_at": "2026-11-02T03:47:04.310Z"
+}

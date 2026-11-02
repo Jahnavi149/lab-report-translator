@@ -1,0 +1,75 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1804 >>
+stream
+BT /F2 16 Tf 50 732 Td (SYNTHETIC SAMPLE LAB REPORT - invented data, not a real patient) Tj ET
+BT /F1 11 Tf 50 702 Td (Patient: Sample Person) Tj ET
+BT /F1 11 Tf 50 686 Td (DOB: 01/01/1970) Tj ET
+BT /F1 11 Tf 50 670 Td (Collected: 12/03/2026) Tj ET
+BT /F2 11 Tf 50 632 Td (Test) Tj ET
+BT /F2 11 Tf 250 632 Td (Result) Tj ET
+BT /F2 11 Tf 310 632 Td (Unit) Tj ET
+BT /F2 11 Tf 390 632 Td (Reference) Tj ET
+BT /F1 11 Tf 50 607 Td (Total Cholesterol) Tj ET
+BT /F1 11 Tf 250 607 Td (230) Tj ET
+BT /F1 11 Tf 310 607 Td (mg/dL) Tj ET
+BT /F1 11 Tf 390 606.4 Td (\(<200\)) Tj ET
+BT /F1 11 Tf 50 583 Td (HDL Cholesterol) Tj ET
+BT /F1 11 Tf 250 583 Td (38) Tj ET
+BT /F1 11 Tf 310 583 Td (mg/dL) Tj ET
+BT /F1 11 Tf 390 583.4 Td (\(>40\)) Tj ET
+BT /F1 11 Tf 50 559 Td (LDL Cholesterol) Tj ET
+BT /F1 11 Tf 250 559 Td (142) Tj ET
+BT /F1 11 Tf 310 559 Td (mg/dL) Tj ET
+BT /F1 11 Tf 390 558.4 Td (Optimal <100, Borderline 130-159) Tj ET
+BT /F1 11 Tf 50 535 Td (Hemoglobin) Tj ET
+BT /F1 11 Tf 250 535 Td (11.2) Tj ET
+BT /F1 11 Tf 310 535 Td (g/dL) Tj ET
+BT /F1 11 Tf 390 535.4 Td (12.0 - 15.5) Tj ET
+BT /F1 11 Tf 50 511 Td (Vitamin D, 25-Hydroxy) Tj ET
+BT /F1 11 Tf 250 511 Td (18) Tj ET
+BT /F1 11 Tf 310 511 Td (ng/mL) Tj ET
+BT /F1 11 Tf 390 510.4 Td (30 - 100) Tj ET
+BT /F1 11 Tf 50 487 Td (Glucose, Fasting) Tj ET
+BT /F1 11 Tf 250 487 Td (92) Tj ET
+BT /F1 11 Tf 310 487 Td (mg/dL) Tj ET
+BT /F1 11 Tf 390 487.4 Td (70 - 99) Tj ET
+BT /F1 11 Tf 50 463 Td (WBC) Tj ET
+BT /F1 11 Tf 250 463 Td (6.5) Tj ET
+BT /F1 11 Tf 310 463 Td (x10E3/uL) Tj ET
+BT /F1 11 Tf 390 462.4 Td (3.4 - 10.8) Tj ET
+BT /F1 11 Tf 50 439 Td (Ferritin) Tj ET
+BT /F1 11 Tf 250 439 Td (22) Tj ET
+BT /F1 11 Tf 310 439 Td (ng/mL) Tj ET
+BT /F1 9 Tf 50 362 Td (Synthetic example generated for Lab Report Translator. Information only, never a diagnosis.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000002107 00000 n 
+0000002177 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2252
+%%EOF

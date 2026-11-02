@@ -1,0 +1,28 @@
+{
+  "name": "lab-report-translator",
+  "version": "0.3.0",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=18.17" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/evaluate.mjs && next build",
+    "start": "next start",
+    "test": "node scripts/evaluate.mjs",
+    "evaluate": "node scripts/evaluate.mjs",
+    "typecheck": "tsc --noEmit",
+    "samples": "node scripts/make-samples.mjs"
+  },
+  "dependencies": {
+    "next": "^14.2.35",
+    "pdfjs-dist": "3.11.174",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.12",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "typescript": "5.5.4"
+  }
+}
