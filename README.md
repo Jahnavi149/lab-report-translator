@@ -11,6 +11,7 @@ Built with Next.js 14, TypeScript and plain CSS. No database, no accounts, nothi
 ## What it does
 
 - **Exact values, units and printed ranges**, copied from the report. Never invented.
+- **PDF source citations**: use the Source column to open the uploaded PDF in a side drawer and highlight the source line.
 - **Flags decided by plain code** (`lib/flags.ts`): High / Low / Normal by comparing the value to the printed range, or **Unknown** when no range is printed. If a report prints several different ranges for one test, the app refuses to pick one and marks the row Needs Review.
 - **One plain-English line per test**, a **3-line summary**, and **3 doctor questions** built from flagged or Unknown rows.
 - **9 languages.** Summary, explanations and questions are translated by Muse Spark. The interface itself is translated for Telugu, Hindi and Spanish.

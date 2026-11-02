@@ -3,7 +3,7 @@ import { enhanceWithMuse } from '@/lib/enhance';
 import { applyFlags, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, museConfigured } from '@/lib/muse';
 import { parseLabTextDetailed } from '@/lib/parse';
-import { extractPdfText } from '@/lib/pdftext';
+import { extractPdfTextWithAnchors } from '@/lib/pdftext';
 import { rateLimited } from '@/lib/ratelimit';
 import { verifyRows } from '@/lib/verify';
 import type { LabReport, LabRow } from '@/lib/types';
@@ -38,15 +38,16 @@ export async function POST(req: Request) {
 
     let report: LabReport;
     if (kind === 'pdf') {
-      const text = await extractPdfText(buffer);
-      const parsed = parseLabTextDetailed(text);
+      const extracted = await extractPdfTextWithAnchors(buffer);
+      const text = extracted.text;
+      const parsed = parseLabTextDetailed(text, extracted.lineAnchors);
       if (parsed.rows.length === 0) return fail('No lab results could be read from this file. If it is a scan or photo, upload it as an image instead, or try the example report.');
       const verification = verifyRows(parsed.rows, text);
       const enhanced = await enhanceWithMuse(verification.rows, { sourceText: text });
       const museNote = enhanced.flaggedByMuse.length > 0 ? ` Muse's second check also could not confirm: ${enhanced.flaggedByMuse.join(', ')}.` : '';
       const skippedNote = parsed.skipped.length > 0 ? ` ${parsed.skipped.length} line${parsed.skipped.length === 1 ? '' : 's'} looked like results but could not be read safely and ${parsed.skipped.length === 1 ? 'was' : 'were'} left out.` : '';
       report = {
-        id: 'uploaded', title: file.name.slice(0, 120), is_synthetic: false,
+        id: 'uploaded', title: file.name.slice(0, 120), is_synthetic: false, source_kind: 'pdf',
         rows: enhanced.rows, summary: enhanced.summary, questions: enhanced.questions,
         verification_passed: verification.passed && enhanced.flaggedByMuse.length === 0 && parsed.skipped.length === 0,
         verification_note: `${verification.note}${museNote}${skippedNote}`,
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
       });
       const enhanced = await enhanceWithMuse(rows);
       report = {
-        id: 'uploaded', title: file.name.slice(0, 120), is_synthetic: false,
+        id: 'uploaded', title: file.name.slice(0, 120), is_synthetic: false, source_kind: 'photo',
         rows: enhanced.rows, summary: enhanced.summary, questions: enhanced.questions,
         verification_passed: false,
         verification_note: 'Read from a photo with Muse Spark vision. A photo cannot be checked against document text the way a digital PDF can, so every row is marked Needs Review. Please compare each value with your original report before sharing.',

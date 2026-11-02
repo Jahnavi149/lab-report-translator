@@ -6,6 +6,7 @@ import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types'
 import { buildShareText, whatsappUrl } from '@/lib/share';
 import { DoctorSheet } from './DoctorSheet';
 import { FamilyHandout } from './FamilyHandout';
+import { PdfCitationViewer } from './PdfCitationViewer';
 
 const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', ml: 'Malayalam · മലയാളം', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी' };
 const VOICE_LANG: Record<Language, string> = { en: 'en-US', te: 'te-IN', hi: 'hi-IN', es: 'es-ES', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN' };
@@ -28,6 +29,8 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [translated, setTranslated] = useState<TranslatedReport | null>(null);
   const [translating, setTranslating] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [sourceAnchor, setSourceAnchor] = useState<LabRow['source_anchor'] | null>(null);
   const listenToken = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -81,6 +84,8 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not read that file.');
       setReport(data as LabReport);
+      setPdfFile(data.source_kind === 'pdf' ? file : null);
+      setSourceAnchor(null);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not read that file.'); }
     finally { setLoading(false); if (fileInput.current) fileInput.current.value = ''; }
   }
@@ -143,7 +148,7 @@ export default function Home() {
   useEffect(() => { stopListen(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
 
-  function startNew() { setReport(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
+  function startNew() { setReport(null); setPdfFile(null); setSourceAnchor(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
   function clearAll() { startNew(); setError(''); }
 
   const shareText = report ? buildShareText({ title: report.title, summary: display.summary, questions: display.questions, questionsHeading: ui.questionsToAsk, disclaimer: ui.infoOnly, synthetic: report.is_synthetic }) : '';
@@ -157,6 +162,9 @@ export default function Home() {
   const flagged = report?.rows.filter((r) => r.flag === 'High' || r.flag === 'Low' || r.flag === 'Unknown') ?? [];
   const reviewCount = report?.rows.filter((r) => r.confidence === 'low').length ?? 0;
   const fromPhoto = report?.muse_features?.includes('photo reading') ?? false;
+  function citeRow(row: LabRow) {
+    if (pdfFile && row.source_anchor) setSourceAnchor(row.source_anchor);
+  }
 
   return (
     <>
@@ -198,6 +206,7 @@ export default function Home() {
         )}
 
         {report && !showDoctor && !showHandout && (
+          <div>
           <section className="card fade" aria-labelledby="report-title">
             <div className="no-print"><button onClick={startNew}>← {ui.newReportBtn}</button></div>
             {error && <div className="error no-print" role="alert">{error}</div>}
@@ -218,7 +227,7 @@ export default function Home() {
             <ul className="bigtext">{display.summary.map((s, i) => <li key={i} className={listenIdx === i ? 'speaking' : ''}>{s}</li>)}</ul>
             <h3>{ui.resultsHeading}</h3>
             <table>
-              <thead><tr><th>{ui.testCol}</th><th>{ui.valueCol}</th><th>{ui.rangeCol}</th><th>{ui.flagCol}</th><th>{ui.meaningCol}</th></tr></thead>
+              <thead><tr><th>{ui.testCol}</th><th>{ui.valueCol}</th><th>{ui.rangeCol}</th><th>{ui.flagCol}</th><th>{ui.meaningCol}</th>{pdfFile && <th>Source</th>}</tr></thead>
               <tbody>
                 {report.rows.map((r) => (
                   <tr key={r.test_name}>
@@ -227,7 +236,8 @@ export default function Home() {
                       {r.confidence === 'low' && <div><span className="pill review" title={r.review_reason}>Needs review</span></div>}
                       {expanded === r.test_name && (
                         <div className="detail">
-                          <strong>{fromPhoto ? 'Quoted from your photo:' : 'From your report:'}</strong> <code>{r.source_text}</code>
+                          <strong>{fromPhoto ? 'Quoted from your photo:' : 'From your report:'}</strong>{' '}
+                          <code>{r.source_text}</code>
                           {r.flag_source === 'report_marker' && <div>The {r.flag} flag was copied from the report&apos;s own marker; no range is printed.</div>}
                           {r.review_reason && <div>{r.review_reason}</div>}
                         </div>
@@ -237,6 +247,9 @@ export default function Home() {
                     <td data-label={ui.rangeCol}>{rangeText(r, 'Range not on report')}</td>
                     <td data-label={ui.flagCol}><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></td>
                     <td data-label={ui.meaningCol}>{display.explain(r)}</td>
+                    {pdfFile && <td data-label="Source">{r.source_anchor
+                      ? <button type="button" className="pdf-citation-button" onClick={() => citeRow(r)} title="View this result in the PDF" aria-label={`View ${r.test_name} in the PDF`}>🔎 <span>View</span></button>
+                      : <span aria-label="No PDF location available">—</span>}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -249,6 +262,8 @@ export default function Home() {
               <button className="btn-ghost" onClick={clearAll}>{ui.clearBtn}</button>
             </div>
           </section>
+          {pdfFile && sourceAnchor && <PdfCitationViewer file={pdfFile} anchor={sourceAnchor} onClose={() => setSourceAnchor(null)} />}
+          </div>
         )}
 
         {report && showHandout && !showDoctor && (
