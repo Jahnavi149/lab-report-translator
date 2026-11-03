@@ -1,6 +1,6 @@
 {
-  "passed": 269,
-  "total": 269,
+  "passed": 276,
+  "total": 276,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -54,9 +54,9 @@
     },
     {
       "name": "Privacy: no PHI/PII reaches the AI (defense in depth)",
-      "passed": 27,
-      "total": 27
+      "passed": 34,
+      "total": 34
     }
   ],
-  "generated_at": "2026-11-03T01:58:43.993Z"
+  "generated_at": "2026-11-03T02:16:52.701Z"
 }

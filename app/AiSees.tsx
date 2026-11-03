@@ -20,6 +20,7 @@ export function AiSees({ input }: { input: AiInputDisclosure }) {
             : n > 0 ? `${n} identifier${n === 1 ? '' : 's'} on your report ${n === 1 ? 'was' : 'were'} kept away from the AI.` : 'No identifiers were sent to the AI.'}
         </strong>{' '}
         <span className="muted small">{input.photo ? 'Check the crop covered your name.' : 'The AI never receives the report text, only the result lines below.'}</span>
+        {input.lines_withheld > 0 && <div className="muted small">{input.lines_withheld} result line{input.lines_withheld === 1 ? ' was' : 's were'} kept out of the second check because {input.lines_withheld === 1 ? 'it has' : 'they have'} extra text.</div>}
         <details className="ai-sees">
           <summary>What the AI sees</summary>
           <p className="muted small">This is everything the AI is given about this report: test names, values, units and printed ranges{input.source_lines.length > 0 ? ', and each result\u2019s own line' : ''}. The sentences it writes are sent back to it only if you ask for a translation.</p>

@@ -1,4 +1,4 @@
-import { looksIdentifying, redactWithAudit, toMuseSafeLine } from './safety';
+import { looksIdentifying, redactWithAudit, toMuseSafeLine, unexplainedWords } from './safety';
 import type { AiInputDisclosure, LabRow, MuseSafeLine, MuseSafeRow } from './types';
 
 // Layer 1 of the privacy design: Muse is only ever handed structured rows.
@@ -23,14 +23,16 @@ export interface MuseCheckItem { row: MuseSafeRow; line: MuseSafeLine }
 
 /**
  * Pairs each safe row with its own redacted source line. Only result lines go out, never the header or the rest
- * of the document. A row whose line carried an identifier is not sent for the second check at all.
+ * of the document. Fail closed: a line is withheld (the row just is not second-checked) if the redactor found an
+ * identifier in it, or if it contains any word that is not the test name, its unit or ordinary result vocabulary
+ * ("Optimal", "High", ...). That second rule is what catches a name printed in a result line with no label.
  */
 export function toCheckItems(rows: LabRow[]): MuseCheckItem[] {
   const items: MuseCheckItem[] = [];
   for (const r of rows) {
     const [row] = toMuseSafe([r]);
     const line = toMuseSafeLine(r.source_text);
-    if (row && line) items.push({ row, line });
+    if (row && line && unexplainedWords(line, r).length === 0) items.push({ row, line });
   }
   return items;
 }
@@ -46,6 +48,7 @@ export function buildAiInput(rows: LabRow[], opts: { reportText?: string; photo:
     rows: toMuseSafe(rows).map((r) => ({ test_name: r.test_name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: r.flag })),
     source_lines: opts.checked ? toCheckItems(rows).map((i) => i.line) : [],
     photo: opts.photo,
+    lines_withheld: opts.checked ? rows.length - toCheckItems(rows).length : 0,
     identifiers_removed: removed.length,
     removed_kinds: [...new Set(removed.map((r) => r.kind))],
   };

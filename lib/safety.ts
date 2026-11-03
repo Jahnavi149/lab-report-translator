@@ -1,4 +1,4 @@
-import type { LabRow, MuseSafeLine } from './types';
+import type { LabRow } from './types';
 
 /** The only row fields any validator needs. A full LabRow and a MuseSafeRow both satisfy it. */
 export type RowFields = Pick<LabRow, 'test_name' | 'value' | 'ref_low' | 'ref_high' | 'flag'>;
@@ -122,90 +122,10 @@ export function translationIsSafe(source: unknown, translated: unknown): transla
   return !containsInterpretation(t);
 }
 
-// --- Privacy: never send identifying lines or patterns to a third-party API ---------------------
-// Layer 2 of three (see README, "Privacy"). Layer 1 is that Muse is only ever handed structured rows
-// (lib/privacy.ts), so this redactor is a backstop for the few free-text lines that are sent.
-//
-// What is removed: any line carrying a labelled identifier (name, date of birth, record/account/lab numbers,
-// contact details, address, relatives, insurance, referring doctor) or a titled name ("Mr. Rao"), and, inside
-// the lines that stay, emails, dates and phone/ID-style numbers.
-//
-// What is deliberately KEPT: age and sex. They are needed to read many reference ranges, and on their own they
-// do not identify a person. Reference ranges and result values are kept intact too (see isLabRange).
-const IDENTIFYING_LINE = /\b(patient|name|dob|d\.o\.b|date of birth|birth|mrn|uhid|address|phone|mobile|tel|fax|email|e-mail|ssn|aadhaar|aadhar|pan|passport|insurance|insured|policy|member|subscriber|claim|referred|referring|physician|doctor|dr|requested by|collected|accession|barcode|sample id|patient id|account|acct|visit|encounter|registration|reg\.? ?no|lab ?no|case ?no|bed|ward|hospital|clinic|guardian|father|mother|husband|wife|spouse|s\/o|w\/o|d\/o|c\/o|pin ?code|zip|postal|city|street|road|district|nationality|religion|occupation|employer|id)\b/i;
-// "Mr. Rao", "Mrs Lakshmi": a courtesy title followed by a capitalised word is a person's name.
-/** True for a line that carries a labelled identifier or a titled name. Used by the parser (so an ID is never read as a result) and by the redactor. */
-export function isIdentifyingLine(line: string): boolean {
-  return IDENTIFYING_LINE.test(line) || TITLED_NAME.test(line);
-}
-const TITLED_NAME = /\b(Mr|Mrs|Ms|Miss|Master|Smt|Shri|Sri)\.?\s+[A-Z][a-z]+/;
-const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*';
-
-export interface Removal { kind: string; text: string }
-
-/**
- * A printed reference range such as "12.0 - 15.5", "3.4 - 10.8" or "150000 - 450000" must reach the checker intact.
- * It is a range if it is two plain numbers around a dash AND is written like one: it has a decimal point, spaces
- * around the dash, or both sides are short. "98765-43210" and "040-23456789" (unspaced, long) still count as
- * phone-style numbers and are masked.
- */
-function isLabRange(s: string): boolean {
-  const m = /^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/.exec(s.trim());
-  if (!m) return false;
-  const [, a = '', b = ''] = m;
-  const digits = (x: string) => x.replace('.', '').length;
-  const spaced = /\s-\s/.test(s);
-  const decimal = a.includes('.') || b.includes('.');
-  const short = digits(a) <= 4 && digits(b) <= 4;
-  return digits(a) <= 7 && digits(b) <= 7 && (spaced || decimal || short);
-}
-
-/**
- * Pure, no network, no env. Drops identifying lines and masks identifying patterns in the rest, and reports what
- * it removed so the UI can show an honest count. `removed[].kind` is safe to show; `removed[].text` is the removed
- * value itself and must never be logged, sent to the browser or sent to a model.
- */
-export function redactWithAudit(text: string): { redacted: string; removed: Removal[] } {
-  const removed: Removal[] = [];
-  const mask = (line: string, re: RegExp, kind: string, replacement: string) =>
-    line.replace(re, (m) => { removed.push({ kind, text: m }); return replacement; });
-  const kept: string[] = [];
-  for (const line of text.split(/\r?\n/)) {
-    if (isIdentifyingLine(line)) { if (line.trim()) removed.push({ kind: 'name or ID line', text: line }); continue; }
-    let out = mask(line, /[\w.+-]+@[\w-]+\.[\w.-]+/g, 'email', '[email]');
-    out = mask(out, /\b\d{4}-\d{1,2}-\d{1,2}\b/g, 'date', '[date]');
-    out = mask(out, /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g, 'date', '[date]');
-    out = mask(out, new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?[ -]${MONTH}[ ,.-]+\\d{2,4}\\b`, 'gi'), 'date', '[date]');
-    out = mask(out, new RegExp(`\\b${MONTH}\\.? \\d{1,2}(?:st|nd|rd|th)?,? \\d{2,4}\\b`, 'gi'), 'date', '[date]');
-    // A decimal or a lab range is a result; a bare 10+ digit integer (no lab value is that long) is an ID or phone number.
-    out = out.replace(/\+?\d[\d\s().-]{8,}\d/g, (m) => {
-      if (/^\d+\.\d+$/.test(m.trim()) || isLabRange(m)) return m;
-      removed.push({ kind: 'phone or ID number', text: m });
-      return '[number]';
-    });
-    kept.push(out);
-  }
-  return { redacted: kept.join('\n'), removed };
-}
-
-export function redactForMuse(text: string): string {
-  return redactWithAudit(text).redacted;
-}
-
-/**
- * One result line, cleaned for the second-pass check. Returns null if the line itself carried an identifier
- * (it is then not sent at all; the row simply is not second-checked).
- */
-export function toMuseSafeLine(line: string): MuseSafeLine | null {
-  const { redacted, removed } = redactWithAudit(line);
-  if (removed.some((r) => r.kind === 'name or ID line') || redacted.trim() === '') return null;
-  return redacted.trim() as MuseSafeLine;
-}
-
-/** True if free text (a test name) carries an identifier and so must not be sent to a model. */
-export function looksIdentifying(text: string): boolean {
-  return redactWithAudit(text).removed.length > 0;
-}
+// --- Privacy ---------------------------------------------------------------------------------------
+// The redactor lives in lib/redact.ts. It is re-exported here so every safety function is importable from one place.
+export { redactForMuse, redactWithAudit, isIdentifyingLine, looksIdentifying, toMuseSafeLine, unexplainedWords, isLabRange } from './redact';
+export type { Removal } from './redact';
 
 /** Test names come from untrusted PDFs and photos. Keep only characters a real test name needs. */
 export function sanitizeTestName(name: string): string {

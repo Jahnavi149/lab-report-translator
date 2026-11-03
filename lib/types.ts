@@ -74,6 +74,8 @@ export interface AiInputDisclosure {
   source_lines: string[];
   /** Photo uploads: the picture itself is sent to be read. It cannot be redacted. */
   photo: boolean;
+  /** Result lines kept out of the second check because they held text that could not be explained as a result. */
+  lines_withheld: number;
   /** How many identifier lines or patterns were found in the report text and kept away from the AI. */
   identifiers_removed: number;
   /** What kinds of identifier those were (never the values), e.g. "name or ID line", "date". */
