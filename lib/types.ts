@@ -53,6 +53,33 @@ export interface LabReport {
   /** Lines that looked like results but could not be read safely. */
   skipped_lines?: string[];
   source_kind?: 'pdf' | 'photo';
+  ai_input?: AiInputDisclosure;
+}
+
+// --- Privacy types --------------------------------------------------------------------------------
+// Muse call sites accept ONLY these two types. Both are "branded": a LabRow or a plain string does not
+// typecheck, and the only code that can create them is lib/privacy.ts (rows) and lib/safety.ts (text).
+// So raw report text cannot reach the model by accident; the compiler refuses it.
+declare const museSafe: unique symbol;
+/** The fields Muse may see about one result. No source line, no file name, no free text. */
+export type MuseSafeRow = Pick<LabRow, 'test_name' | 'value' | 'unit' | 'ref_low' | 'ref_high' | 'flag'> & { readonly [museSafe]: true };
+/** One report line with identifying lines and patterns already removed. */
+export type MuseSafeLine = string & { readonly [museSafe]: true };
+
+/** Exactly what the AI was given for a report, shown to the user under "What the AI sees". */
+export interface AiInputDisclosure {
+  /** The result fields sent to Muse (name, value, unit, range, flag). */
+  rows: Pick<LabRow, 'test_name' | 'value' | 'unit' | 'ref_low' | 'ref_high' | 'flag'>[];
+  /** PDF only: the redacted result lines sent for the second-pass check. */
+  source_lines: string[];
+  /** Photo uploads: the picture itself is sent to be read. It cannot be redacted. */
+  photo: boolean;
+  /** Result lines kept out of the second check because they held text that could not be explained as a result. */
+  lines_withheld: number;
+  /** How many identifier lines or patterns were found in the report text and kept away from the AI. */
+  identifiers_removed: number;
+  /** What kinds of identifier those were (never the values), e.g. "name or ID line", "date". */
+  removed_kinds: string[];
 }
 
 /** Muse translation, item by item. A null item failed validation and stays in English. */

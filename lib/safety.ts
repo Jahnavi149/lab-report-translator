@@ -1,5 +1,8 @@
 import type { LabRow } from './types';
 
+/** The only row fields any validator needs. A full LabRow and a MuseSafeRow both satisfy it. */
+export type RowFields = Pick<LabRow, 'test_name' | 'value' | 'ref_low' | 'ref_high' | 'flag'>;
+
 // Everything that decides whether AI-written text may reach the screen lives here.
 // It is pure (no network, no env) so it can be unit-tested against adversarial outputs.
 // Principle: AI explains, code decides. Anything that fails a check is discarded and the
@@ -51,15 +54,15 @@ const CONTRADICTS: Record<LabRow['flag'], RegExp> = {
   Unknown: /higher than|above|lower than|below|inside|within|outside|normal/i,
 };
 
-const hasTestName = (text: string, row: LabRow) => text.toLowerCase().includes(row.test_name.toLowerCase());
+const hasTestName = (text: string, row: RowFields) => text.toLowerCase().includes(row.test_name.toLowerCase());
 /** Remove the row's own test name so names like "Vitamin B12" or "Drug screen" do not trip number/content checks. */
-const stripNames = (text: string, rows: LabRow[]) => rows.reduce((t, r) => t.split(new RegExp(r.test_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).join(' '), text);
+const stripNames = (text: string, rows: RowFields[]) => rows.reduce((t, r) => t.split(new RegExp(r.test_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).join(' '), text);
 
 /**
  * One explanation sentence. Must name the test and its value, contain only the row's own numbers,
  * state a direction that AGREES with the code-computed flag, and contain no interpretation.
  */
-export function explanationIsSafe(explanation: unknown, row: LabRow): explanation is string {
+export function explanationIsSafe(explanation: unknown, row: RowFields): explanation is string {
   if (typeof explanation !== 'string') return false;
   const text = explanation.trim();
   if (text.length < 10 || text.length > 300) return false;
@@ -78,7 +81,7 @@ export function explanationIsSafe(explanation: unknown, row: LabRow): explanatio
 }
 
 /** Three lines. Only the report's own numbers; every High/Low test must be named in line 1. */
-export function summaryIsSafe(summary: unknown, rows: LabRow[]): summary is string[] {
+export function summaryIsSafe(summary: unknown, rows: RowFields[]): summary is string[] {
   if (!Array.isArray(summary) || summary.length !== 3) return false;
   if (!summary.every((s) => typeof s === 'string' && s.trim().length > 0 && s.length <= 400)) return false;
   const allowed = allowedNumbersForRows(rows);
@@ -94,7 +97,7 @@ export function summaryIsSafe(summary: unknown, rows: LabRow[]): summary is stri
 }
 
 /** One question per priority row. May ask about causes, but never name a condition, treatment or advice. */
-export function questionIsSafe(question: unknown, row: LabRow): question is string {
+export function questionIsSafe(question: unknown, row: RowFields): question is string {
   if (typeof question !== 'string') return false;
   const q = question.trim();
   if (q.length < 10 || q.length > 300 || !q.endsWith('?')) return false;
@@ -119,38 +122,10 @@ export function translationIsSafe(source: unknown, translated: unknown): transla
   return !containsInterpretation(t);
 }
 
-// --- Privacy: never send identifying header lines to a third-party API ------------------
-const IDENTIFYING_LINE = /\b(patient|name|dob|d\.o\.b|date of birth|birth|mrn|uhid|address|phone|mobile|tel|fax|email|e-mail|ssn|aadhaar|passport|insurance|policy|referred|referring|physician|doctor|dr\.|requested by|collected|accession|barcode|sample id|patient id|id)\b/i;
-
-/**
- * A printed reference range such as "12.0 - 15.5", "3.4 - 10.8" or "150000 - 450000" must reach the checker intact.
- * It is a range if it is two plain numbers around a dash AND is written like one: it has a decimal point, spaces
- * around the dash, or both sides are short. "98765-43210" and "040-23456789" (unspaced, long) still count as
- * phone-style numbers and are masked.
- */
-function isLabRange(s: string): boolean {
-  const m = /^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/.exec(s.trim());
-  if (!m) return false;
-  const [, a = '', b = ''] = m;
-  const digits = (x: string) => x.replace('.', '').length;
-  const spaced = /\s-\s/.test(s);
-  const decimal = a.includes('.') || b.includes('.');
-  const short = digits(a) <= 4 && digits(b) <= 4;
-  return digits(a) <= 7 && digits(b) <= 7 && (spaced || decimal || short);
-}
-
-/** Drops lines that look like patient identifiers and masks emails, phone numbers, long ID numbers and dates. Lab ranges are kept. */
-export function redactForMuse(text: string): string {
-  return text
-    .split(/\r?\n/)
-    .filter((line) => !IDENTIFYING_LINE.test(line))
-    .map((line) => line
-      .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[email]')
-      .replace(/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g, '[date]')
-      // A decimal or a lab range is a result; a bare 10+ digit integer (no lab value is that long) is an ID or phone number.
-      .replace(/\+?\d[\d\s().-]{8,}\d/g, (m) => (/^\d+\.\d+$/.test(m.trim()) || isLabRange(m) ? m : '[number]')))
-    .join('\n');
-}
+// --- Privacy ---------------------------------------------------------------------------------------
+// The redactor lives in lib/redact.ts. It is re-exported here so every safety function is importable from one place.
+export { redactForMuse, redactWithAudit, isIdentifyingLine, looksIdentifying, toMuseSafeLine, unexplainedWords, isLabRange } from './redact';
+export type { Removal } from './redact';
 
 /** Test names come from untrusted PDFs and photos. Keep only characters a real test name needs. */
 export function sanitizeTestName(name: string): string {

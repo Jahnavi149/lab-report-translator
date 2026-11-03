@@ -252,3 +252,22 @@ body.contrast .infoline, body.contrast footer, body.contrast details.more > summ
 body.contrast details.more { border: 2px solid #000; }
 @media (max-width: 800px) { .topbar { position: static; } }
 @media (max-width: 700px) { td { padding: 7px 10px; } tbody td { padding: 7px 10px; } }
+
+/* Photo crop step and "What the AI sees" */
+.crop-dialog { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto; padding: 22px; border-radius: 18px; background: var(--card); box-shadow: 0 18px 60px rgba(7, 20, 30, .45); }
+.crop-dialog h2 { margin-top: 0; }
+.crop-stage { position: relative; background: #fff; border: 1px solid var(--line); line-height: 0; }
+.crop-dialog:focus { outline: none; }
+.crop-stage img { display: block; width: 100%; max-height: 38vh; object-fit: contain; background: #dfe7eb; }
+.crop-shade { position: absolute; background: rgba(7, 20, 30, .62); pointer-events: none; }
+.crop-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin: 14px 0 4px; }
+.crop-sliders label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .95rem; }
+.crop-sliders input { width: 100%; }
+@media (max-width: 600px) { .crop-sliders { grid-template-columns: 1fr; } }
+.privacy-badge { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; padding: 12px 16px; border-radius: 14px; background: #e8f6f1; border: 1px solid #a8dcc8; }
+.ai-sees { margin-top: 10px; }
+.ai-sees summary { cursor: pointer; font-weight: 700; }
+.ai-sees pre { margin: 10px 0 0; padding: 12px; max-height: 320px; overflow: auto; border-radius: 10px; background: #0f2230; color: #e6f1f5; font-size: .85rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+body.contrast .privacy-badge { background: #fff; color: #000; border: 2px solid #000; }
+body.contrast .crop-dialog { background: #fff; color: #000; border: 2px solid #000; }
+body.contrast .ai-sees pre { background: #fff; color: #000; border: 2px solid #000; }

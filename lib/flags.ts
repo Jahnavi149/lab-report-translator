@@ -48,7 +48,7 @@ export function summaryFor(rows: LabRow[]): string[] {
   return [first, second, third];
 }
 
-export function priorityRows(rows: LabRow[]): LabRow[] {
+export function priorityRows<T extends { flag: Flag }>(rows: T[]): T[] {
   return rows.filter((r) => r.flag === 'High' || r.flag === 'Low' || r.flag === 'Unknown').slice(0, 3);
 }
 

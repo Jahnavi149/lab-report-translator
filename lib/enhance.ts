@@ -1,6 +1,6 @@
 import { questionsFor, summaryFor } from './flags';
 import { explainWithMuse, questionsWithMuse, summarizeWithMuse, verifyWithMuse } from './muse';
-import { redactForMuse } from './safety';
+import { toCheckItems, toMuseSafe } from './privacy';
 import type { LabRow } from './types';
 
 export interface Enhancement {
@@ -15,15 +15,24 @@ export interface Enhancement {
 /**
  * Runs every Muse job in parallel. A sentence that Muse got wrong, or that fails the safety check, is
  * replaced by the code-written template. Flags, values, units and ranges are never touched here.
+ *
+ * Privacy: this is the only door to Muse. Rows are converted to MuseSafeRow here (name, value, unit, range, flag and
+ * nothing else), and the second-pass check gets each row's own redacted result line, never the report text.
+ * If a test name itself looks like an identifier, that row is left out and the whole-report summary and questions
+ * use the code-written text, so the identifier cannot appear in any request.
  */
-export async function enhanceWithMuse(rows: LabRow[], opts: { sourceText?: string } = {}): Promise<Enhancement> {
+export async function enhanceWithMuse(rows: LabRow[], opts: { check?: boolean } = {}): Promise<Enhancement> {
   const baseSummary = summaryFor(rows);
   const baseQuestions = questionsFor(rows);
+  const safe = toMuseSafe(rows);
+  const everyRowSafe = safe.length === rows.length;
+  const checkItems = opts.check ? toCheckItems(rows) : [];
+  const skip = <T>(v: T) => Promise.resolve(v);
   const [explain, summary, questions, check] = await Promise.allSettled([
-    explainWithMuse(rows),
-    summarizeWithMuse(rows),
-    questionsWithMuse(rows),
-    opts.sourceText ? verifyWithMuse(redactForMuse(opts.sourceText), rows) : Promise.resolve([] as string[]),
+    safe.length > 0 ? explainWithMuse(safe) : skip({} as Record<string, string>),
+    everyRowSafe ? summarizeWithMuse(safe) : Promise.reject(new Error('a test name looked like an identifier; using the code-written summary')),
+    everyRowSafe ? questionsWithMuse(safe) : skip([] as string[]),
+    checkItems.length > 0 ? verifyWithMuse(checkItems) : skip([] as string[]),
   ]);
   const features: string[] = [];
   const log = (what: string, r: PromiseRejectedResult) => console.error(`Muse ${what} failed:`, r.reason instanceof Error ? r.reason.message : r.reason);
@@ -45,7 +54,7 @@ export async function enhanceWithMuse(rows: LabRow[], opts: { sourceText?: strin
 
   let flaggedByMuse: string[] = [];
   if (check.status === 'fulfilled') {
-    if (opts.sourceText) features.push('second-pass check');
+    if (checkItems.length > 0) features.push('second-pass check');
     flaggedByMuse = check.value;
     if (flaggedByMuse.length > 0) {
       out = out.map((r) => (flaggedByMuse.includes(r.test_name) ? { ...r, confidence: 'low' as const, review_reason: 'Muse second-pass check could not confirm this row against the document.' } : r));
