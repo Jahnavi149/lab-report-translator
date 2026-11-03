@@ -233,7 +233,7 @@ export default function Home() {
               </div>
               {loading && <div role="status"><p>Reading your report. This can take up to a minute…</p><div className="progress"><i /></div></div>}
               {error && <div className="error" role="alert">{error}</div>}
-              <p className="muted small">Nothing is stored. The AI never receives your report text: only test names, values and ranges are sent to Meta&apos;s Muse AI, never your name, date of birth or ID. For a photo you crop out the header first.</p>
+              <p className="muted small">Nothing is stored. The AI never receives your report text: only test names, values and ranges are sent to Meta&apos;s Muse AI, never your name, date of birth or ID. A photo is cleaned first: identifiers are painted out of the picture on this server, and you can see exactly what was sent.</p>
             </section>
           </>
         )}

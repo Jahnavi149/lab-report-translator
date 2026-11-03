@@ -63,19 +63,38 @@ The app stores nothing: no database, no accounts, files are handled in memory. *
    - Linear time: a 200,000-character hostile line takes about 10 ms (an earlier email pattern was quadratic; a test now guards it).
 
    The audit (count and kinds, never the values) is shown in the app as "N identifiers were kept away from the AI".
-3. **Photos are the documented exception.** Pixels cannot be redacted by code, so a photo is sent to Muse as a picture so the results can be read from it. Before upload the user is asked to crop the photo to the results table; the trimmed part (the header with the name) is cut off in the browser and never leaves the device. The app says plainly that the photo is sent and that the user should check the crop covered their name.
+3. **Photos are cleaned before they can be sent (`lib/photo.ts`).** A photo cannot become rows without sending a picture to Muse's vision model, so the picture is cleaned first, and the cleaning is checked:
+   1. The server redraws the photo upright, on white, at a bounded size (this also drops EXIF and GPS data).
+   2. A local OCR engine (PaddleOCR on ONNX, inside this server) reads every text box on it. Nothing leaves the server.
+   3. Each box is flagged by the **patterns** (layer 2) or by a **clinical de-identification model** (below). A label with nothing after it ("Patient Name", "MRN:") also takes the line under it, where its value sits.
+   4. Every flagged box is **painted solid black on the pixels**. The paint is generous (it covers ascenders, descenders and tilted or merged lines), and the original pixels are put back inside the boxes of text that was not flagged, so a result row next to a name line survives.
+   5. The painted picture is **read again**. If any flagged text can still be read, or new identifiers appear where none were judged clean, it is painted again; if that does not settle in three rounds the photo is **refused**.
+   6. Only that painted picture can be sent: the vision call is typed to accept a `RedactedPhoto`, which only `lib/photo.ts` can create, and `lib/privacy.typecheck.ts` fails the build if a raw upload ever type-checks there.
+
+   The photo is also **refused, not sent**, when the local reader cannot run, when too little text could be read to be sure (fewer than 3 text boxes), or when the privacy model is not installed (unless you set `NER_REQUIRED=0`, which allows patterns-only cleaning and says so in the panel). The browser still offers an optional crop step as an extra layer: whatever is trimmed never leaves the device.
+
+   **The model.** [StanfordAIMI/stanford-deidentifier-base](https://huggingface.co/StanfordAIMI/stanford-deidentifier-base) (MIT), in its ONNX int8 build, trained on radiology and clinical notes for exactly this job (published F1 about 99 on the i2b2 benchmarks). It finds patient and clinician names, hospitals and addresses, ID numbers, phone numbers and dates with **no label needed**, which patterns cannot: `Maria Gonzalez Lopez`, `SMITH, JOHN A`, `Reviewed by Priya Raman MD`, `Apollo Hospitals, Jubilee Hills, Hyderabad`. It runs on the server (about 8 ms per line), nothing is sent anywhere to run it, and it is used **together with** the patterns: either one is enough to flag something. `npm run models` downloads it once and checks each file against a pinned SHA-256 (it runs before `npm run dev` and `npm run build`). Guards that were needed after measuring it on real reports: a short bare number in a result box is a value, not an ID; a reference range such as `70-99` is never taken for a date; and a result row whose spaces OCR dropped (`Sodium138mmol/L135-145`) is not mistaken for an ID.
+
+   For PDFs the same model also screens each result line before the second-pass check, and adds what it found in the full text to the count shown to the user. Model installed but failing: no line is sent. Model not installed: patterns only, and the panel says so.
 
 **Deliberately kept:** age and sex. Many reference ranges depend on them, and alone they do not identify a person. They are still not sent today (layer 1 sends no free text), and the redactor leaves them alone if they appear in a result line.
 
 **What the AI sees.** The results page has an expandable "What the AI sees" panel with the exact rows (and result lines) given to the AI for that report. Translation sends the app's own plain-English sentences back to the AI; those contain only test names, values and ranges.
 
-**Not covered:** the redactor is pattern based, not a trained model. It is tested against a corpus in `scripts/evaluate.mjs` (70+ identifier patterns across scripts and formats, plus 39 ordinary lines that must pass untouched), not against every report in the world. An identifier written in a language or label style not listed, and placed in a line that otherwise looks like a result, is still caught by the unexplained-words rule if it is made of letters, but a purely numeric ID with no label and fewer than 8 digits would not be. Labels were written from common usage in each language and have not been reviewed by a native speaker for every script. See Meta's terms for what they retain.
+**Measured** (all synthetic or screenshot data, reproducible with `npm test`): the model finds 12/12 unlabelled names, places, IDs and dates in a hard corpus, and flags 0 of the ordinary result lines in the corpus (and 0 of 47 result lines from real Quest screenshots); 6 fixture photos (labelled header, unlabelled names, stacked label-over-value in capitals, and tilted, blurred, glare-lit copies) are cleaned with **0 invented identifiers readable afterwards and 0 result rows lost**; on 10 real Quest screenshots, 0 of 47 rows are damaged by painting; and an end-to-end test intercepts the real request body, decodes the image out of it and reads it.
+
+**Not covered, honestly:**
+- Anything OCR cannot read is not painted: **handwriting, a signature, a logo, a face, and barcodes or QR codes** (which can encode a patient ID). The optional crop step exists for these; for a photo that has them, crop them out or upload a PDF.
+- The OCR engine and the model are English-first. A name in another script on a photo is covered only if it sits on a label line the patterns know (those cover nine scripts), not by the model.
+- The model's published accuracy is on clinical notes; lab reports are a different style, which is why it is tested here on lab-report-like lines and combined with patterns rather than trusted alone. It is an assistive filter, not a guarantee, and a purely numeric ID with no label and fewer than 7 digits looks like a result and is left alone.
+- Labels were written from common usage in each language and have not been reviewed by a native speaker for every script. Institution names are painted when the model flags them but are not treated as patient identifiers.
+- See Meta's terms for what they retain.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3000 (first run downloads the 110 MB privacy model, then caches it)
 ```
 
 The first screen has two actions: **Choose your report** and **Try an example report**.
@@ -94,6 +113,8 @@ META_MODEL=muse-spark-1.3
 | `META_MODEL_API_URL`, `META_MODEL` | Optional overrides |
 | `MUSE_TIMEOUT_MS` | Per-call timeout, default 45000 (vision 55000) |
 | `MUSE_MAX_TOKENS` | Token budget per call, default 8000. Muse Spark is a reasoning model: its hidden thinking counts against this, and at 3000 a live run returned empty answers (`finish_reason=length`) |
+| `NER_REQUIRED` | Default on: a photo is refused when the privacy model is not installed. Set `0` to allow patterns-only cleaning (the panel then says so) |
+| `NER_MODEL_DIR`, `NER_TIMEOUT_MS`, `OCR_TIMEOUT_MS` | Optional: model folder (default `models/ner`) and time limits |
 | `MUSE_REASONING_EFFORT` | Default `low`. `off` stops sending it. If the gateway rejects it with HTTP 400 the app retries without it |
 
 ## Tests
@@ -111,6 +132,7 @@ npm test      # also runs before every `npm run build`
 | Verifier | Per-row, whole-token checks; tampered values and ranges are caught |
 | Real PDF end to end | `public/sample-report.pdf` → 8 correct rows, patient name/DOB never become rows, redaction removes identifiers |
 | Privacy | 30+ adversarial identifier lines (names, DOB in several formats, MRN, phone, email, address, SSN, Aadhaar, insurance, relatives, dates inside result lines) are put through the redactor and through the whole pipeline with a mocked API; every request body is inspected for leaks ("N identifier substrings tested, 0 leaked"); every request carries only allow-listed row fields; rows are byte-identical before and after; the user-facing audit contains no identifiers; the build fails if raw text becomes accepted by a Muse function |
+| Privacy model and photo cleaning | The real model and OCR run on six fixture photos (labelled, unlabelled, stacked-capitals, tilted, blurred, glare): each cleaned photo is read again and none of the invented identifiers can be made out, every result row survives; recall on unlabelled names/places/IDs/dates; zero flags on ordinary result lines; long text read in windows with exact offsets; refusals (blank photo, not an image, model missing); patterns-only mode; an end-to-end check on the image actually inside the Muse request body |
 | AI-output safety | Faithful sentences accepted; diagnoses, diet/supplement advice, invented numbers, contradictions of the code's flag, urgency and over-long text rejected |
 | Localized interface, sharing | Every interface string exists and is translated for te/hi/es; the "does NOT mean" box is translated; share text adds no numbers beyond the summary and questions and keeps the information-only line; the WhatsApp link round-trips the exact text |
 | Muse pipeline (mocked API) | Good output used; adversarial output dropped; HTTP 500 and 400 handled; flags/values never change; hostile text stays inside `<data>` |
@@ -146,7 +168,7 @@ Accounts, report history or storage, diagnosis, treatment advice, risk scores, a
 
 ## Deploy
 
-Deploy as a Next.js app (Vercel or any Node host). Photo citations load the PaddleOCR engine (about 60 MB for the Linux runtime and models); `next.config.js` tells the file tracer to ship those and leave out the Windows and macOS runtimes. If your host's function size limit is smaller, photos still read fine and only the citation buttons disappear (the OCR step fails safe and returns no lines). Check one photo upload on the live link. Set `META_MODEL_API_KEY` in the dashboard, never in the repo. Check the public link in a logged-out browser. `npm run build` runs the test suite first, so a regression fails the deploy.
+Deploy as a Next.js app (Vercel or any Node host). Photos load the PaddleOCR engine (about 60 MB for the Linux runtime and models) and the privacy model (110 MB, fetched by `npm run models` during the build, which needs network access to huggingface.co; every file is checked against a pinned SHA-256). Together that is close to a serverless function's size limit on some plans, so check the build output and upload one photo on the live link; a host that cannot fit them should use a Node server instead. **Photos are refused, not sent uncleaned, when the OCR or the model cannot run.** `next.config.js` tells the file tracer to ship those and leave out the Windows and macOS runtimes. Set `META_MODEL_API_KEY` in the dashboard, never in the repo. Check the public link in a logged-out browser. `npm run build` runs the test suite first, so a regression fails the deploy.
 
 ## License
 

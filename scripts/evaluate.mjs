@@ -424,12 +424,12 @@ calls = mockMuse(() => ({ rows: [
   { test_name: 'Bad', value: 'abc' }, { test_name: '', value: 3 },
   { test_name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 99, ref_high: 70, source_text: 'Glucose 90 mg/dL 70 - 99' },
 ] }));
-const vis = await muse.extractFromImageWithMuse(Buffer.from([1, 2, 3]), 'image/png');
+const vis = await muse.extractFromImageWithMuse({ buffer: Buffer.from([1, 2, 3]), mime: 'image/jpeg', regions: 0, kinds: [], preview: '' });
 eq('vision: malformed rows dropped, 3 kept', vis.length, 3);
 check('vision: markup stripped from names', vis.every((r) => !/[<>]/.test(r.test_name)));
 check('vision: row whose numbers are not on its quoted line is marked inconsistent', vis.find((r) => r.test_name.startsWith('Sodium')).consistent === false && vis[0].consistent === true);
 check('vision: a range Muse got backwards (low > high) is replaced by the one our parser reads from the quoted line', vis.find((r) => r.test_name === 'Glucose').ref_low === 70 && vis.find((r) => r.test_name === 'Glucose').ref_high === 99);
-check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/png;base64,'));
+check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/jpeg;base64,'));
 
 // A live run showed Muse quoting "(<200)" correctly but leaving both bounds null, turning a High result into "Unknown".
 // The range is now re-read from the quoted line by our own parser, so it no longer depends on Muse filling the fields.
@@ -441,7 +441,7 @@ calls = mockMuse(() => ({ rows: [
   { test_name: 'Ferritin', value: 22, unit: 'ng/mL', ref_low: null, ref_high: null, source_text: 'Ferritin 22 ng/mL' },
   { test_name: 'Sodium', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'free text that does not parse' },
 ] }));
-const one2 = await muse.extractFromImageWithMuse(Buffer.from([1, 2, 3]), 'image/png');
+const one2 = await muse.extractFromImageWithMuse({ buffer: Buffer.from([1, 2, 3]), mime: 'image/jpeg', regions: 0, kinds: [], preview: '' });
 const byName = Object.fromEntries(one2.map((r) => [r.test_name, r]));
 check('vision: "(<200)" with empty bounds from Muse is read as an upper bound of 200', byName['Total Cholesterol'].ref_low === null && byName['Total Cholesterol'].ref_high === 200);
 check('vision: "(>40)" with empty bounds from Muse is read as a lower bound of 40', byName['HDL Cholesterol'].ref_low === 40 && byName['HDL Cholesterol'].ref_high === null);
@@ -657,7 +657,7 @@ const museSrc = readFileSync('lib/muse.ts', 'utf8');
 check('lib/muse.ts never imports or names LabRow', !/\bLabRow\b/.test(museSrc));
 check('explain, summary, questions take MuseSafeRow[] and verify takes MuseCheckItem[]', ['explainWithMuse(rows: MuseSafeRow[])', 'summarizeWithMuse(rows: MuseSafeRow[])', 'questionsWithMuse(rows: MuseSafeRow[])', 'verifyWithMuse(items: MuseCheckItem[])'].every((sig) => museSrc.includes(sig)));
 const beforeVision = museSrc.slice(0, museSrc.indexOf('export async function extractFromImageWithMuse'));
-check('the only Muse call that builds an image part is the photo reader', museSrc.includes('extractFromImageWithMuse(buffer: Buffer') && (beforeVision.match(/image_url/g) ?? []).length === 2 && !/base64/.test(beforeVision));
+check('the only Muse call that builds an image part is the photo reader', museSrc.includes('extractFromImageWithMuse(photo: RedactedPhoto') && (beforeVision.match(/image_url/g) ?? []).length === 2 && !/base64/.test(beforeVision));
 globalThis.fetch = realFetch;
 delete process.env.META_MODEL_API_KEY;
 
@@ -667,6 +667,121 @@ check('crop: no trimming is not a crop', !cropIsValid({ top: 0, right: 0, bottom
 check('crop: trimming a header is a valid crop', cropIsValid({ top: 0.25, right: 0, bottom: 0, left: 0 }));
 check('crop: a crop that leaves almost nothing is refused', !cropIsValid({ top: 0.6, right: 0, bottom: 0.35, left: 0 }) && !cropIsValid({ top: 0, right: 0.5, bottom: 0, left: 0.4 }));
 check('photo files are recognised, PDFs are not', isImageFile({ type: 'image/png', name: 'a' }) && isImageFile({ type: '', name: 'scan.JPG' }) && !isImageFile({ type: 'application/pdf', name: 'r.pdf' }));
+
+// ------------------------------------------------------------------------------------------------
+group('Privacy model and photo cleaning (local; no network)');
+const nerMod = load('ner');
+const photoMod = load('photo');
+const privacyModel = load('privacyModel');
+const sq = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+check('the privacy model is installed (run: npm run models)', nerMod.nerAvailable());
+const spansOf = async (t) => (await nerMod.detectPhi(t)).map((x) => ({ kind: x.kind, text: t.slice(x.start, x.end) }));
+
+// Recall: identifiers with no label, which patterns cannot recognise.
+const UNLABELLED = [
+  ['Maria Gonzalez Lopez', 'person', 'Lopez'], ['SMITH, JOHN A', 'person', 'SMITH'], ['JOHN SMITH', 'person', 'SMITH'], ['Dr. Anil Kapoor', 'person', 'Kapoor'],
+  ['Reviewed by Priya Raman MD', 'person', 'Raman'], ['Referring physician: Sarah Johnson', 'person', 'Johnson'], ['Dear Mr. Sharma, your results are below', 'person', 'Sharma'],
+  ['Apollo Hospitals, Jubilee Hills, Hyderabad', 'place', 'Jubilee'], ['Collected at Apollo Clinic, 12 MG Road, Pune 411001', 'place', 'Pune'],
+  ['MRN 00482913   Accession AC-993201', 'id', '993201'], ['SANJAY IYER', 'person', 'IYER'], ['Collected: 09/21/2026  Reported: 09/22/2026', 'date', '2026'],
+];
+const missed = [];
+for (const [line, kind, needle] of UNLABELLED) { const sp = await spansOf(line); if (!sp.some((x) => x.kind === kind && x.text.includes(needle))) missed.push(line + ' => ' + JSON.stringify(sp)); }
+check('model recall: ' + (UNLABELLED.length - missed.length) + '/' + UNLABELLED.length + ' unlabelled names, places, IDs and dates found', missed.length === 0, missed.join(' | '));
+
+// Precision: ordinary result lines must never be flagged (a flagged result line would be painted out of a photo).
+const TYPICAL = [...REAL_LINES, 'Hemoglobin 13.2 g/dL 12.0-15.5', 'CHOLESTEROL, TOTAL 228 H mg/dL <200', 'Vitamin D, 25-OH, Total, IA 31 ng/mL 30-100', 'Sodium 138 mmol/L 135-145', 'Creatinine 1.4 mg/dL 0.6-1.2', 'TSH 6.8 mIU/L 0.4-4.5', 'Absolute Neutrophils 3599 cells/uL 1500-7800', 'Reference Range: 3.8-10.8 Thousand/uL', 'Glucose 126 mg/dL 70-99', 'HbA1c 6.4 % 4.0-5.7'];
+const flaggedTypical = [];
+for (const line of TYPICAL) { const sp = await spansOf(line); if (sp.length) flaggedTypical.push(line + ' => ' + JSON.stringify(sp)); }
+check('model precision: ' + (TYPICAL.length - flaggedTypical.length) + '/' + TYPICAL.length + ' ordinary result lines are not flagged', flaggedTypical.length === 0, flaggedTypical.join(' | '));
+
+// Long text is read in windows; offsets stay exact; a repeated range is not turned into a date.
+const filler = (n) => Array.from({ length: n }, (_, i) => 'Glucose ' + (80 + (i % 20)) + ' mg/dL 70-99').join('\n');
+const longText = filler(300) + '\nPatient: Rahul Verma\n' + filler(300) + '\nSeen by Dr. Meera Nair\n' + filler(50);
+const longSpans = await spansOf(longText);
+check('long text: names near the middle and the end are both found', longSpans.some((x) => x.text.includes('Verma')) && longSpans.some((x) => x.text.includes('Nair')), JSON.stringify(longSpans.slice(0, 5)));
+check('long text: a repeated reference range (70-99) is not flagged as a date', !longSpans.some((x) => x.kind === 'date'), JSON.stringify(longSpans.filter((x) => x.kind === 'date').slice(0, 3)));
+check('long text: every span points at exactly the text it names (offsets are exact)', longSpans.every((x) => longText.includes(x.text)));
+check('plausibleDate: real dates yes', ['21/09/2026', '21 Sep 2026', '2026-09-21', '9/21/26'].every((d) => nerMod.plausibleDate(d)));
+check('plausibleDate: ranges and values no', ['70-99', '2.5-4.5', '135 - 145', '40-190', '12.0-15.5', '3.8-10.8', '0.4 - 4.5'].every((d) => !nerMod.plausibleDate(d)));
+check('empty and blank text cost nothing and return no spans', (await nerMod.detectPhi('')).length === 0 && (await nerMod.detectPhi('   \n ')).length === 0);
+
+// Photo helpers.
+check('bare result numbers are recognised, IDs are not', ['3599', '15.6 H', '< 200', '4.53', '1,330'].every((t) => photoMod.isBareResultNumber(t)) && !['00482913', 'AC-993201', 'PX-7741209', '9876501234', 'MRN 5'].some((t) => photoMod.isBareResultNumber(t)));
+check('label-only lines take the line below; a label with its value does not', photoMod.labelOnly('Patient Name') && photoMod.labelOnly('MRN:') && photoMod.labelOnly('Mobile') && !photoMod.labelOnly('Collected: 21/09/2026') && !photoMod.labelOnly('Referred by: Dr. Anil Kapoor') && !photoMod.labelOnly('Patient ID 00482913'));
+check('respace restores the gaps OCR drops', photoMod.respace('Sodium138mmol/L135-145') === 'Sodium 138 mmol/L 135-145');
+check('a glued ordinary result row is a false alarm for the ID pattern', ['Sodium138mmol/L135-145', 'Ferritin22ng/mL30-400', 'VitaminB12250pg/mL 200-900'].every((t) => photoMod.isGluedResultRow(t)));
+check('but a glued identifier is not excused', !photoMod.isGluedResultRow('MRN00482913') && !photoMod.isGluedResultRow('PX-7741209') && !photoMod.isGluedResultRow('Phone9876501234'));
+
+// Result lines for the second-pass check are screened by the model too.
+const mkItem = (line, name = 'Hemoglobin') => ({ row: { test_name: name, value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Low' }, line });
+const screened = await privacyModel.screenCheckItems([mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5'), mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5 Priya Raman'), mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5 Dr Kapoor')]);
+check('model screening keeps a clean result line and withholds lines holding a name', screened.items.length === 1 && screened.withheld === 2 && screened.engine === 'patterns+model', JSON.stringify(screened.items.map((i) => i.line)));
+const audited = await privacyModel.addModelAudit({ rows: [], source_lines: [], photo: false, lines_withheld: 0, identifiers_removed: 2, removed_kinds: ['name or ID line'] }, 'Glucose 90 mg/dL 70-99\nReviewed by Priya Raman MD\nApollo Hospitals, Jubilee Hills, Hyderabad');
+check('the audit adds what the model found (counts and kinds, never values)', audited.engine === 'patterns+model' && audited.identifiers_removed > 2 && audited.removed_kinds.includes('name') && !JSON.stringify(audited).includes('Raman'), JSON.stringify(audited));
+
+// Photos: every fixture (labelled, unlabelled, stacked, tilted, blurred, glare) is cleaned and then READ AGAIN.
+const manifest = JSON.parse(readFileSync('fixtures/phi/manifest.json', 'utf8'));
+let cleanedPhotos = 0;
+for (const m of manifest) {
+  const res = await photoMod.redactPhoto(readFileSync('fixtures/phi/' + m.file));
+  if (!res.ok) { check(m.file + ': photo accepted', false, 'refused: ' + res.reason); continue; }
+  const scan = await ocr.scanImage(res.photo.buffer);
+  const text = sq((scan ? scan.lines : []).map((l) => l.text).join(' '));
+  const leaked = m.phi.filter((p) => text.includes(p));
+  const lost = m.rows.filter(([n, v]) => !text.includes(sq(String(v))) || !text.includes(sq(n).slice(0, 6)));
+  check(m.file + ': nothing identifying can be read from the cleaned photo', leaked.length === 0, 'still readable: ' + JSON.stringify(leaked));
+  check(m.file + ': every result row is still readable', lost.length === 0, 'lost: ' + JSON.stringify(lost));
+  check(m.file + ': regions were painted and the engine is reported', res.photo.regions > 0 && res.engine === 'patterns+model' && res.photo.preview.startsWith('data:image/jpeg;base64,'));
+  cleanedPhotos++;
+}
+check('all ' + manifest.length + ' fixture photos were accepted and cleaned', cleanedPhotos === manifest.length);
+
+// Refusals: when the photo cannot be proven clean, it is not sent.
+const blank = await (await import('sharp')).default({ create: { width: 800, height: 600, channels: 3, background: '#ffffff' } }).png().toBuffer();
+const r1 = await photoMod.redactPhoto(blank);
+check('a photo with almost no readable text is refused, not sent', !r1.ok && r1.reason === 'too_little_text', JSON.stringify(r1.reason));
+const r2 = await photoMod.redactPhoto(Buffer.from('not an image at all'));
+check('bytes that are not an image are refused', !r2.ok && r2.reason === 'bad_image', JSON.stringify(r2.reason));
+process.env.NER_MODEL_DIR = '/nonexistent/model/dir';
+const r3 = await photoMod.redactPhoto(readFileSync('fixtures/phi/labelled-table.png'));
+check('model missing: the photo is refused by default', !r3.ok && r3.reason === 'no_model', JSON.stringify(r3.reason));
+process.env.NER_REQUIRED = '0';
+const r4 = await photoMod.redactPhoto(readFileSync('fixtures/phi/labelled-table.png'));
+check('model missing with NER_REQUIRED=0: patterns-only cleaning, reported as such, labelled fields still covered', r4.ok && r4.engine === 'patterns' && r4.photo.regions > 0, JSON.stringify(r4.ok ? r4.engine : r4.reason));
+if (r4.ok) {
+  const scan4 = await ocr.scanImage(r4.photo.buffer);
+  const t4 = sq(scan4.lines.map((l) => l.text).join(' '));
+  check('patterns-only mode still hides labelled name, ID, phone and address', ['rahul', 'verma', '00482913', '9876543210', '411001'].every((p) => !t4.includes(p)));
+}
+delete process.env.NER_MODEL_DIR; delete process.env.NER_REQUIRED;
+check('the model and OCR are healthy again after those refusals', (await photoMod.redactPhoto(readFileSync('fixtures/phi/unlabelled-names.png'))).ok);
+
+// End to end: intercept the request the vision call really sends, decode the image out of it, and read it.
+process.env.META_MODEL_API_KEY = 'test-key-not-real';
+const realFetch2 = globalThis.fetch;
+const sentBodies = [];
+globalThis.fetch = async (url, init) => {
+  sentBodies.push(init.body);
+  return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ rows: [{ test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' }] }) } }] }), { status: 200 });
+};
+const original = readFileSync('fixtures/phi/labelled-table-medium.jpg');
+const cleaned = await photoMod.redactPhoto(original);
+const visionRows = cleaned.ok ? await muse.extractFromImageWithMuse(cleaned.photo) : [];
+globalThis.fetch = realFetch2; delete process.env.META_MODEL_API_KEY;
+check('end to end: the vision call ran and returned its row', cleaned.ok && visionRows.length === 1 && sentBodies.length === 1);
+if (cleaned.ok && sentBodies.length === 1) {
+  const body = JSON.parse(sentBodies[0]);
+  const parts = body.messages.flatMap((m) => (Array.isArray(m.content) ? m.content : [{ type: 'text', text: m.content }]));
+  const dataUrl = parts.find((p) => p.type === 'image_url').image_url.url;
+  const sentImage = Buffer.from(dataUrl.split(',')[1], 'base64');
+  const sentScan = await ocr.scanImage(sentImage);
+  const sentText = sq((sentScan ? sentScan.lines : []).map((l) => l.text).join(' '));
+  const PHI = manifest.find((m) => m.file === 'labelled-table-medium.jpg').phi;
+  check('end to end: the picture inside the request body is the cleaned one, not the upload', sentImage.equals(cleaned.photo.buffer) && !sentImage.equals(original));
+  check('end to end: reading the image that was actually sent finds none of the invented identifiers', PHI.every((p) => !sentText.includes(p)), JSON.stringify(PHI.filter((p) => sentText.includes(p))));
+  check('end to end: no identifier appears anywhere else in the request text', PHI.every((p) => !sq(JSON.stringify(parts.filter((p2) => p2.type === 'text'))).includes(p)));
+  check('end to end: the photo\'s EXIF/GPS metadata is gone (the picture was redrawn)', !sentImage.includes(Buffer.from('Exif')) && !sentImage.includes(Buffer.from('GPS')));
+}
 
 // ------------------------------------------------------------------------------------------------
 const passed = groups.reduce((a, g) => a + g.passed, 0);

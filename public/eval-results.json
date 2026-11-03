@@ -1,6 +1,6 @@
 {
-  "passed": 293,
-  "total": 293,
+  "passed": 347,
+  "total": 347,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -44,8 +44,8 @@
     },
     {
       "name": "Photo citations: OCR finds the line, code matches it",
-      "passed": 26,
-      "total": 26
+      "passed": 34,
+      "total": 34
     },
     {
       "name": "Muse pipeline against a mocked Meta API (no network)",
@@ -56,7 +56,12 @@
       "name": "Privacy: no PHI/PII reaches the AI (defense in depth)",
       "passed": 34,
       "total": 34
+    },
+    {
+      "name": "Privacy model and photo cleaning (local; no network)",
+      "passed": 46,
+      "total": 46
     }
   ],
-  "generated_at": "2026-11-03T19:37:17.471Z"
+  "generated_at": "2026-11-03T21:34:09.058Z"
 }

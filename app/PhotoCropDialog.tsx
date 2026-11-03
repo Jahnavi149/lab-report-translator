@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { cropIsValid, type CropEdges } from '@/lib/clientImage';
 
-// Privacy step for photos. A photo cannot be redacted by code, so the user trims it first: the part outside the
-// crop is cut off in this browser and never uploaded. Sliders (not drag handles) so it works with a keyboard,
-// a screen reader and a thumb.
+// Optional extra privacy step for photos. The server already paints identifiers out of the picture before it can be
+// sent anywhere (lib/photo.ts); trimming here is a second, independent layer: the part outside the crop is cut off in
+// this browser and never uploaded at all. Sliders (not drag handles) so it works with a keyboard, a screen reader and a thumb.
 const NONE: CropEdges = { top: 0, right: 0, bottom: 0, left: 0 };
 const MAX_TRIM = 0.8; // top + bottom (and left + right) may never leave less than 20% / 10% of the picture
 
@@ -47,10 +47,10 @@ export function PhotoCropDialog({ file, onConfirm, onCancel }: { file: File; onC
     <div className="pdf-drawer-root">
       <button className="pdf-drawer-backdrop" type="button" onClick={onCancel} aria-label="Cancel" tabIndex={-1} />
       <div className="crop-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="crop-title">
-        <h2 id="crop-title">Crop out your name before reading</h2>
+        <h2 id="crop-title">Trim your photo before reading (optional)</h2>
         <p className="warn" style={{ marginTop: 0 }}>
-          <strong>This photo is sent to Meta&apos;s Muse AI to be read.</strong> A picture cannot be censored automatically,
-          so trim away the header with your name, date of birth and ID, and keep only the results table. The trimmed part never leaves this device.
+          <strong>Before Meta&apos;s Muse AI sees this photo, names, IDs, phone numbers, addresses and dates are found on this server and painted out,</strong>{' '}
+          and the cleaned picture is read again to check. You will see exactly what was sent. For an extra layer, trim away the header here: the trimmed part never leaves this device.
         </p>
         <div className="crop-stage">
           {/* eslint-disable-next-line @next/next/no-img-element */}

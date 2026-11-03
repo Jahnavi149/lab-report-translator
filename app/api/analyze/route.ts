@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { enhanceWithMuse } from '@/lib/enhance';
 import { applyFlags, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, museConfigured } from '@/lib/muse';
-import { matchRowToLine, ocrLines } from '@/lib/ocr';
+import { matchRowToLine, type OcrLine } from '@/lib/ocr';
+import { PHOTO_REFUSAL_MESSAGES, redactPhoto } from '@/lib/photo';
+import { addModelAudit } from '@/lib/privacyModel';
 import { parseLabTextDetailed } from '@/lib/parse';
 import { buildAiInput } from '@/lib/privacy';
 import { extractPdfTextWithAnchors } from '@/lib/pdftext';
@@ -16,7 +18,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const citationBox = (test_name: string, r: { value: number; unit: string; ref_low: number | null; ref_high: number | null }, ocr: Awaited<ReturnType<typeof ocrLines>>) => {
+const citationBox = (test_name: string, r: { value: number; unit: string; ref_low: number | null; ref_high: number | null }, ocr: OcrLine[]) => {
   const box = matchRowToLine({ test_name, ...r }, ocr);
   return box ? { source_box: box } : {};
 };
@@ -60,13 +62,18 @@ export async function POST(req: Request) {
         source_note: 'Read from your PDF. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: enhanced.features.length > 0, muse_features: enhanced.features,
         skipped_lines: parsed.skipped.slice(0, 10),
-        ai_input: buildAiInput(enhanced.rows, { reportText: text, photo: false, checked: true }),
+        ai_input: await addModelAudit(buildAiInput(enhanced.rows, { reportText: text, photo: false, checked: true }), text),
       };
     } else {
       if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);
       if (rateLimited(req, 'vision', 10)) return fail('Too many photo uploads from this connection. Please wait a few minutes and try again.', 429);
-      // Muse reads the values; OCR (run alongside it, locally) finds where each line is on the photo.
-      const [vision, ocr] = await Promise.all([extractFromImageWithMuse(buffer, `image/${kind}`), ocrLines(buffer)]);
+      // The picture is cleaned first: identifiers are found locally (patterns plus a clinical privacy model) and painted
+      // out of the pixels, and the painted picture is read again to prove they are gone. Only that picture can be sent.
+      const cleaned = await redactPhoto(buffer);
+      if (!cleaned.ok) return fail(PHOTO_REFUSAL_MESSAGES[cleaned.reason], cleaned.reason === 'no_ocr' || cleaned.reason === 'no_model' || cleaned.reason === 'model_failed' ? 503 : 422);
+      // Muse reads the values from the cleaned picture; the lines the local OCR read from the original place the citations.
+      const vision = await extractFromImageWithMuse(cleaned.photo);
+      const ocr = cleaned.lines;
       if (vision.length === 0) return fail('No lab results could be read from this photo. Try a flatter, brighter, closer photo, or upload a digital PDF.');
       const seen = new Map<string, number>();
       const rows: LabRow[] = applyFlags(vision).map((r) => {
@@ -92,7 +99,11 @@ export async function POST(req: Request) {
         verification_note: 'Read from a photo with Muse Spark vision. A photo cannot be checked against document text the way a digital PDF can, so every row is marked Needs Review. Please compare each value with your original report before sharing.',
         source_note: 'Read from your photo. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: true, muse_features: ['photo reading', ...enhanced.features],
-        ai_input: buildAiInput(enhanced.rows, { photo: true, checked: false }),
+        ai_input: {
+          ...buildAiInput(enhanced.rows, { photo: true, checked: false }),
+          photo_preview: cleaned.photo.preview, photo_regions: cleaned.photo.regions, engine: cleaned.engine,
+          identifiers_removed: cleaned.photo.regions, removed_kinds: cleaned.photo.kinds,
+        },
       };
     }
     return NextResponse.json(report);

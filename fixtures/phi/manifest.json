@@ -1,0 +1,158 @@
+[
+  {
+    "file": "labelled-table.png",
+    "rows": [
+      [
+        "Hemoglobin",
+        11.2
+      ],
+      [
+        "Total Cholesterol",
+        230
+      ],
+      [
+        "HDL Cholesterol",
+        38
+      ],
+      [
+        "Glucose",
+        126
+      ]
+    ],
+    "phi": [
+      "rahul",
+      "verma",
+      "00482913",
+      "9876543210",
+      "411001",
+      "kapoor",
+      "14031987"
+    ]
+  },
+  {
+    "file": "labelled-table-medium.jpg",
+    "rows": [
+      [
+        "Hemoglobin",
+        11.2
+      ],
+      [
+        "Total Cholesterol",
+        230
+      ],
+      [
+        "HDL Cholesterol",
+        38
+      ],
+      [
+        "Glucose",
+        126
+      ]
+    ],
+    "phi": [
+      "rahul",
+      "verma",
+      "00482913",
+      "9876543210",
+      "411001",
+      "kapoor",
+      "14031987"
+    ]
+  },
+  {
+    "file": "unlabelled-names.png",
+    "rows": [
+      [
+        "Ferritin",
+        22
+      ],
+      [
+        "TSH",
+        6.8
+      ],
+      [
+        "Vitamin B12",
+        250
+      ]
+    ],
+    "phi": [
+      "maria",
+      "gonzalez",
+      "lopez",
+      "priya",
+      "raman",
+      "jubilee"
+    ]
+  },
+  {
+    "file": "unlabelled-names-medium.jpg",
+    "rows": [
+      [
+        "Ferritin",
+        22
+      ],
+      [
+        "TSH",
+        6.8
+      ],
+      [
+        "Vitamin B12",
+        250
+      ]
+    ],
+    "phi": [
+      "maria",
+      "gonzalez",
+      "lopez",
+      "priya",
+      "raman",
+      "jubilee"
+    ]
+  },
+  {
+    "file": "stacked-caps.png",
+    "rows": [
+      [
+        "Creatinine",
+        1.4
+      ],
+      [
+        "Sodium",
+        138
+      ],
+      [
+        "Potassium",
+        4.1
+      ]
+    ],
+    "phi": [
+      "sanjay",
+      "iyer",
+      "px7741209",
+      "9876501234"
+    ]
+  },
+  {
+    "file": "stacked-caps-harsh.jpg",
+    "rows": [
+      [
+        "Creatinine",
+        1.4
+      ],
+      [
+        "Sodium",
+        138
+      ],
+      [
+        "Potassium",
+        4.1
+      ]
+    ],
+    "phi": [
+      "sanjay",
+      "iyer",
+      "px7741209",
+      "9876501234"
+    ]
+  }
+]

@@ -271,3 +271,5 @@ body.contrast details.more { border: 2px solid #000; }
 body.contrast .privacy-badge { background: #fff; color: #000; border: 2px solid #000; }
 body.contrast .crop-dialog { background: #fff; color: #000; border: 2px solid #000; }
 body.contrast .ai-sees pre { background: #fff; color: #000; border: 2px solid #000; }
+
+.ai-photo { display: block; max-width: min(100%, 420px); height: auto; border: 1px solid var(--border, #d0d7de); border-radius: 8px; margin: 0.5rem 0; }

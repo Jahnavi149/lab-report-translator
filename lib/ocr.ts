@@ -5,9 +5,9 @@ import type { ImageSourceBox } from './types';
 // carries both its test name and its value; otherwise it gets no highlight, never a wrong one.
 
 /** x0..y1 is the box on the photo; f* is the same box after straightening the page (set when the photo is tilted). */
-export interface OcrWord { text: string; x0: number; y0: number; x1: number; y1: number; fx0?: number; fy0?: number; fx1?: number; fy1?: number }
+export interface OcrWord { text: string; x0: number; y0: number; x1: number; y1: number; fx0?: number; fy0?: number; fx1?: number; fy1?: number; /** The four corners the engine found (pixels), for painting a region out exactly. */ quad?: number[][] }
 /** box = where to draw on the photo. flat = the same place on the straightened page, used only to judge layout (same row, left of, between). */
-export interface OcrLine { text: string; box: ImageSourceBox; flat?: ImageSourceBox }
+export interface OcrLine { text: string; box: ImageSourceBox; flat?: ImageSourceBox; /** The engine's own text boxes that make up this line, in reading order (joined with single spaces to make `text`). */ words?: OcrWord[] }
 type RowKey = { test_name: string; value: number; unit?: string; ref_low: number | null; ref_high: number | null };
 
 // --- image header facts (no image library needed) -----------------------------------------------
@@ -94,7 +94,7 @@ export function groupWordsIntoLines(words: OcrWord[], width: number, height: num
       width: r((Math.max(...ws.map((w) => w.fx1 as number)) - Math.min(...ws.map((w) => w.fx0 as number))) / width),
       height: r((Math.max(...ws.map((w) => w.fy1 as number)) - Math.min(...ws.map((w) => w.fy0 as number))) / height),
     } : undefined;
-    return { text: ws.map((w) => w.text).join(' '), box: { x: r(left), y: r(top), width: r(right - left), height: r(bottom - top) }, ...(flat ? { flat } : {}) };
+    return { text: ws.map((w) => w.text).join(' '), box: { x: r(left), y: r(top), width: r(right - left), height: r(bottom - top) }, ...(flat ? { flat } : {}), words: ws };
   });
 }
 
@@ -230,7 +230,7 @@ async function recognizeWords(buffer: Buffer): Promise<OcrWord[]> {
   const cx = image.width / 2, cy = image.height / 2, cos = Math.cos(skew), sin = Math.sin(skew);
   return kept.map((t) => {
     const xs = t.box.map((pt) => pt[0] as number), ys = t.box.map((pt) => pt[1] as number);
-    const word: OcrWord = { text: t.text.trim(), x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+    const word: OcrWord = { text: t.text.trim(), x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys), quad: t.box.map((pt) => [pt[0] as number, pt[1] as number]) };
     if (skew !== 0) {
       // Rotate the text box's corners back by the page's tilt, so "same row" means same row on the paper.
       const fx = t.box.map((pt) => cx + ((pt[0] as number) - cx) * cos + ((pt[1] as number) - cy) * sin);
@@ -261,14 +261,16 @@ export function pageSkew(boxes: number[][][]): number {
   return deg < 0.4 || deg > 30 ? 0 : median;
 }
 
+/** Everything the engine read: its text boxes, the lines they form, and the image size. */
+export interface OcrScan { words: OcrWord[]; lines: OcrLine[]; width: number; height: number }
+
 /**
- * Lines of text on the photo with their boxes, or [] when the photo cannot be located safely. Never throws:
- * a photo without citations is still a fully readable report.
+ * Reads a photo. Returns null when the engine could not run (so callers can tell "failed" from "no text"), never
+ * throws. The photo must be upright (orientation 1): the engine does not apply stored rotation.
  */
-export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
+export async function scanImage(buffer: Buffer): Promise<OcrScan | null> {
   const info = imageInfo(buffer);
-  // Stored rotation is not applied by the OCR engine, so boxes would not line up with what the browser shows.
-  if (!info || info.orientation !== 1 || info.width < 50 || info.height < 50) return [];
+  if (!info || info.orientation !== 1 || info.width < 50 || info.height < 50) return null;
   const job = (g.__labOcrChain ?? Promise.resolve()).then(async () => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -276,13 +278,21 @@ export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
         recognizeWords(buffer),
         new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('OCR timed out')), OCR_TIMEOUT_MS); }),
       ]);
-      return groupWordsIntoLines(words, info.width, info.height);
+      return { words, lines: groupWordsIntoLines(words, info.width, info.height), width: info.width, height: info.height } as OcrScan;
     } catch (e) {
       console.error('OCR failed:', e instanceof Error ? e.message : e);
       g.__labOcrEngine = undefined; // a broken engine must not poison later uploads
-      return [] as OcrLine[];
+      return null;
     } finally { if (timer) clearTimeout(timer); }
   });
   g.__labOcrChain = job.catch(() => undefined);
   return job;
+}
+
+/**
+ * Lines of text on the photo with their boxes, or [] when the photo cannot be located safely. Never throws:
+ * a photo without citations is still a fully readable report.
+ */
+export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
+  return (await scanImage(buffer))?.lines ?? [];
 }

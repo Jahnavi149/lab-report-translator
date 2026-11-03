@@ -15,3 +15,8 @@ eval/photos/*
 eval/.cache/
 eval/report/
 eval/phone-sim/
+
+# Downloaded NER model (npm run models)
+models/ner/*
+!models/ner/README.txt
+eval/redacted/
