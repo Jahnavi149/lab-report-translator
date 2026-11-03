@@ -8,7 +8,8 @@ const nextConfig = {
     // Hosts that trace files (e.g. Vercel) must ship the OCR models and the Linux runtime with the analyze route,
     // and can leave out the Windows and macOS runtimes (about 250 MB) that the same package carries.
     outputFileTracingIncludes: { '/api/analyze': ['./node_modules/@gutenye/ocr-models/**', './node_modules/onnxruntime-node/bin/napi-v6/linux/**'] },
-    outputFileTracingExcludes: { '/api/analyze': ['./node_modules/onnxruntime-node/bin/napi-v6/win32/**', './node_modules/onnxruntime-node/bin/napi-v6/darwin/**'] },
+    // models/ner is the opt-in local evaluation model (never part of the deploy); it is excluded even if present on disk.
+    outputFileTracingExcludes: { '*': ['./models/ner/**', './node_modules/@huggingface/**'], '/api/analyze': ['./models/ner/**', './node_modules/@huggingface/**', './node_modules/onnxruntime-node/bin/napi-v6/win32/**', './node_modules/onnxruntime-node/bin/napi-v6/darwin/**'] },
   },
   webpack: (config) => {
     config.resolve.alias = { ...config.resolve.alias, canvas: false };

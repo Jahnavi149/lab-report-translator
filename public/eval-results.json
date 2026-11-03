@@ -1,6 +1,6 @@
 {
-  "passed": 341,
-  "total": 341,
+  "passed": 356,
+  "total": 356,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -63,10 +63,10 @@
       "total": 40
     },
     {
-      "name": "Optional evaluation model: SKIPPED (not installed; opt in with npm run models)",
-      "passed": 0,
-      "total": 0
+      "name": "Optional evaluation model (Stanford de-identifier; off in the app)",
+      "passed": 15,
+      "total": 15
     }
   ],
-  "generated_at": "2026-11-03T21:54:51.166Z"
+  "generated_at": "2026-11-03T21:56:36.336Z"
 }

@@ -680,7 +680,8 @@ delete process.env.PRIVACY_MODEL; // the running app's configuration
 // The rule: the app calls only Meta's Muse. The third-party research model is opt-in, off, and cannot run by accident.
 const pkgScripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts;
 check('dev and build neither download nor run the third-party model', !/models|fetch-models|PRIVACY_MODEL/.test(`${pkgScripts.dev} ${pkgScripts.build} ${pkgScripts.start}`), JSON.stringify([pkgScripts.dev, pkgScripts.build]));
-check('the deploy config does not ship the third-party model', !/models\/ner|tokenizers/.test(readFileSync('next.config.js', 'utf8')));
+const nextCfg = readFileSync('next.config.js', 'utf8');
+check('the deploy config excludes the third-party model and never includes it', /outputFileTracingExcludes[^\n]*models\/ner/.test(nextCfg) && !/outputFileTracingIncludes[^\n]*(models\/ner|tokenizers)/.test(nextCfg));
 const importers = readdirSync('lib').filter((f) => f.endsWith('.ts') && /from '\.\/ner'/.test(readFileSync(join('lib', f), 'utf8'))).sort();
 check('only the photo cleaner and the opt-in text screen import the model module', JSON.stringify(importers) === JSON.stringify(['photo.ts', 'privacyModel.ts']), JSON.stringify(importers));
 check('the model refuses to run unless PRIVACY_MODEL=1', await nerMod.detectPhi('Rahul Verma').then(() => false, (e) => /off/.test(String(e))));
