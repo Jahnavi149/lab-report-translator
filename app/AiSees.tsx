@@ -17,12 +17,12 @@ export function AiSees({ input }: { input: AiInputDisclosure }) {
       <div>
         <strong>
           {input.photo
-            ? n > 0 ? `Your photo was cleaned before it was sent: ${n} ${n === 1 ? 'area' : 'areas'} with personal details ${n === 1 ? 'was' : 'were'} painted out${kinds}.` : 'Your photo was checked before it was sent: no personal details were found on it.'
+            ? n > 0 ? `Your photo was cleaned before it was sent: ${n} ${n === 1 ? 'area' : 'areas'} with labelled personal details ${n === 1 ? 'was' : 'were'} painted out${kinds}.` : 'Your photo was checked before it was sent: no labelled personal details were found on it.'
             : n > 0 ? `${n} identifier${n === 1 ? '' : 's'} on your report ${n === 1 ? 'was' : 'were'} kept away from the AI.` : 'No identifiers were sent to the AI.'}
         </strong>{' '}
         <span className="muted small">
-          {input.photo ? 'The cleaned picture was read again to make sure nothing identifying could still be made out.' : 'The AI never receives the report text, only the result lines below.'}
-          {input.engine === 'patterns+model' ? ' Checked by pattern rules and a clinical privacy model running on this server.' : input.engine === 'patterns' ? ' Checked by pattern rules only (the privacy model is not installed on this server).' : ''}
+          {input.photo ? 'The cleaned picture was read again to make sure nothing that was painted could still be made out. A name printed with no label cannot be found automatically, so trim it away before uploading.' : 'The AI never receives the report text, only the result lines below.'}
+          {input.engine === 'patterns+model' ? ' Checked by pattern rules and an optional evaluation model on this server.' : input.engine === 'patterns' ? ' Checked by pattern rules, on this server.' : ''}
         </span>
         {input.lines_withheld > 0 && <div className="muted small">{input.lines_withheld} result line{input.lines_withheld === 1 ? ' was' : 's were'} kept out of the second check because {input.lines_withheld === 1 ? 'it has' : 'they have'} extra text.</div>}
         <details className="ai-sees">

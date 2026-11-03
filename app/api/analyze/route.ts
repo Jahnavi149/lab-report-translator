@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     } else {
       if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);
       if (rateLimited(req, 'vision', 10)) return fail('Too many photo uploads from this connection. Please wait a few minutes and try again.', 429);
-      // The picture is cleaned first: identifiers are found locally (patterns plus a clinical privacy model) and painted
+      // The picture is cleaned first: identifiers are found locally (patterns; the research model only if PRIVACY_MODEL=1) and painted
       // out of the pixels, and the painted picture is read again to prove they are gone. Only that picture can be sent.
       const cleaned = await redactPhoto(buffer);
       if (!cleaned.ok) return fail(PHOTO_REFUSAL_MESSAGES[cleaned.reason], cleaned.reason === 'no_ocr' || cleaned.reason === 'no_model' || cleaned.reason === 'model_failed' ? 503 : 422);

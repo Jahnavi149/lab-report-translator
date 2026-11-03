@@ -1,4 +1,4 @@
-import { detectPhi, nerAvailable, overlaps, PHI_KIND_LABELS, type PhiSpan } from './ner';
+import { detectPhi, nerAvailable, nerEnabled, overlaps, PHI_KIND_LABELS, type PhiSpan } from './ner';
 import { scanImage, type OcrLine, type OcrScan, type OcrWord } from './ocr';
 import { parseLabText } from './parse';
 import { isIdentifyingLine, redactWithAudit, unexplainedWords } from './redact';
@@ -9,8 +9,9 @@ import type { RedactedPhoto } from './types';
 //
 //   1. Redraw the photo upright, on white, at a readable size (this also drops EXIF and GPS data).
 //   2. Read every text box on it with the local OCR engine (nothing leaves this server).
-//   3. Flag a box when patterns (lib/redact.ts) or the clinical privacy model (lib/ner.ts) say it holds an identifier.
-//      A line that is only a label ("Patient Name") also takes the line under it, where the value often sits.
+//   3. Flag a box when the patterns (lib/redact.ts) say it holds an identifier. (An opt-in evaluation model, lib/ner.ts,
+//      can add to this when PRIVACY_MODEL=1; it is off in the running app.) A line that is only a label ("Patient Name")
+//      also takes the line under it, where the value sits.
 //   4. Paint every flagged box solid black, on the pixels.
 //   5. Read the painted picture again. If any flagged text can still be read, or the second read finds anything new,
 //      paint again; if that does not settle in three rounds, refuse the photo. Refusing is always the safe answer.
@@ -19,7 +20,7 @@ import type { RedactedPhoto } from './types';
 
 export type PhotoRefusal =
   | 'no_ocr'        // the local reader could not run
-  | 'no_model'      // the privacy model is not installed and patterns-only mode was not enabled
+  | 'no_model'      // PRIVACY_MODEL=1 was set (evaluation) but the model is not installed
   | 'model_failed'  // the privacy model failed while checking
   | 'too_little_text' // too few text boxes to be sure nothing is hiding in the picture
   | 'unsettled'     // painting did not remove everything within three rounds
@@ -30,7 +31,7 @@ export type PhotoResult =
 
 export const PHOTO_REFUSAL_MESSAGES: Record<PhotoRefusal, string> = {
   no_ocr: 'The photo privacy check could not run, so the photo was not sent anywhere. Please upload a digital PDF instead, or try again.',
-  no_model: 'The photo privacy model is not installed on this server, so the photo was not sent anywhere. Please upload a digital PDF instead.',
+  no_model: 'The optional photo privacy model was switched on but is not installed on this server, so the photo was not sent anywhere. Please upload a digital PDF instead.',
   model_failed: 'The photo privacy check failed, so the photo was not sent anywhere. Please try again, or upload a digital PDF.',
   too_little_text: 'Not enough printed text could be read on this photo to check it for personal details, so it was not sent anywhere. Try a flatter, brighter, closer photo, or upload a digital PDF.',
   unsettled: 'Some personal details on this photo could not be covered reliably, so it was not sent anywhere. Crop your name and ID out of the photo and try again, or upload a digital PDF.',
@@ -40,8 +41,6 @@ export const PHOTO_REFUSAL_MESSAGES: Record<PhotoRefusal, string> = {
 const MAX_EDGE = 2400;
 const MIN_BOXES = 3;
 const ROUNDS = 3;
-/** Set NER_REQUIRED=0 to allow patterns-only cleaning when the model is not installed (shown to the user as such). */
-const modelRequired = () => process.env.NER_REQUIRED !== '0';
 
 // sharp is native code: load it with a real dynamic import (same reason as lib/ocr.ts).
 const dynamicImport = new Function('s', 'return import(s)') as (s: string) => Promise<{ default: Sharp }>;
@@ -200,8 +199,9 @@ const squash = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
  * photo, which the caller uses to place source citations; those lines stay on the server.
  */
 export async function redactPhoto(raw: Buffer): Promise<PhotoResult> {
-  let useModel = nerAvailable();
-  if (!useModel && modelRequired()) return { ok: false, reason: 'no_model' };
+  // Patterns only, unless the opt-in evaluation model was switched on (PRIVACY_MODEL=1). Asked for but missing: refuse.
+  let useModel = nerEnabled();
+  if (useModel && !nerAvailable()) return { ok: false, reason: 'no_model' };
 
   let base: Buffer;
   try { base = await normalise(raw); } catch { return { ok: false, reason: 'bad_image' }; }
@@ -212,9 +212,7 @@ export async function redactPhoto(raw: Buffer): Promise<PhotoResult> {
   const run = async (lines: OcrLine[]): Promise<Found | 'failed'> => {
     try { return await flag(lines, useModel); } catch (e) {
       console.error('Privacy model failed:', e instanceof Error ? e.message : e);
-      if (modelRequired()) return 'failed';
-      useModel = false; // patterns-only mode was explicitly allowed
-      return flag(lines, false);
+      return 'failed'; // the model was explicitly switched on, so a failure is not silently skipped
     }
   };
 

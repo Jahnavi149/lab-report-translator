@@ -27,7 +27,7 @@ export async function enhanceWithMuse(rows: LabRow[], opts: { check?: boolean } 
   const baseQuestions = questionsFor(rows);
   const safe = toMuseSafe(rows);
   const everyRowSafe = safe.length === rows.length;
-  // Result lines are checked by patterns and the unexplained-word rule (toCheckItems), then by the privacy model.
+  // Result lines are checked by patterns and the unexplained-word rule (toCheckItems), then (only when the opt-in evaluation model is on) by that model.
   const checkItems = opts.check ? (await screenCheckItems(toCheckItems(rows))).items : [];
   const skip = <T>(v: T) => Promise.resolve(v);
   const [explain, summary, questions, check] = await Promise.allSettled([

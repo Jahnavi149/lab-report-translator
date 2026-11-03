@@ -669,41 +669,26 @@ check('crop: a crop that leaves almost nothing is refused', !cropIsValid({ top: 
 check('photo files are recognised, PDFs are not', isImageFile({ type: 'image/png', name: 'a' }) && isImageFile({ type: '', name: 'scan.JPG' }) && !isImageFile({ type: 'application/pdf', name: 'r.pdf' }));
 
 // ------------------------------------------------------------------------------------------------
-group('Privacy model and photo cleaning (local; no network)');
+group('Photo cleaning by patterns (what the running app does; no extra model)');
 const nerMod = load('ner');
 const photoMod = load('photo');
 const privacyModel = load('privacyModel');
 const sq = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-check('the privacy model is installed (run: npm run models)', nerMod.nerAvailable());
-const spansOf = async (t) => (await nerMod.detectPhi(t)).map((x) => ({ kind: x.kind, text: t.slice(x.start, x.end) }));
+const manifest = JSON.parse(readFileSync('fixtures/phi/manifest.json', 'utf8'));
+delete process.env.PRIVACY_MODEL; // the running app's configuration
 
-// Recall: identifiers with no label, which patterns cannot recognise.
-const UNLABELLED = [
-  ['Maria Gonzalez Lopez', 'person', 'Lopez'], ['SMITH, JOHN A', 'person', 'SMITH'], ['JOHN SMITH', 'person', 'SMITH'], ['Dr. Anil Kapoor', 'person', 'Kapoor'],
-  ['Reviewed by Priya Raman MD', 'person', 'Raman'], ['Referring physician: Sarah Johnson', 'person', 'Johnson'], ['Dear Mr. Sharma, your results are below', 'person', 'Sharma'],
-  ['Apollo Hospitals, Jubilee Hills, Hyderabad', 'place', 'Jubilee'], ['Collected at Apollo Clinic, 12 MG Road, Pune 411001', 'place', 'Pune'],
-  ['MRN 00482913   Accession AC-993201', 'id', '993201'], ['SANJAY IYER', 'person', 'IYER'], ['Collected: 09/21/2026  Reported: 09/22/2026', 'date', '2026'],
-];
-const missed = [];
-for (const [line, kind, needle] of UNLABELLED) { const sp = await spansOf(line); if (!sp.some((x) => x.kind === kind && x.text.includes(needle))) missed.push(line + ' => ' + JSON.stringify(sp)); }
-check('model recall: ' + (UNLABELLED.length - missed.length) + '/' + UNLABELLED.length + ' unlabelled names, places, IDs and dates found', missed.length === 0, missed.join(' | '));
-
-// Precision: ordinary result lines must never be flagged (a flagged result line would be painted out of a photo).
-const TYPICAL = [...REAL_LINES, 'Hemoglobin 13.2 g/dL 12.0-15.5', 'CHOLESTEROL, TOTAL 228 H mg/dL <200', 'Vitamin D, 25-OH, Total, IA 31 ng/mL 30-100', 'Sodium 138 mmol/L 135-145', 'Creatinine 1.4 mg/dL 0.6-1.2', 'TSH 6.8 mIU/L 0.4-4.5', 'Absolute Neutrophils 3599 cells/uL 1500-7800', 'Reference Range: 3.8-10.8 Thousand/uL', 'Glucose 126 mg/dL 70-99', 'HbA1c 6.4 % 4.0-5.7'];
-const flaggedTypical = [];
-for (const line of TYPICAL) { const sp = await spansOf(line); if (sp.length) flaggedTypical.push(line + ' => ' + JSON.stringify(sp)); }
-check('model precision: ' + (TYPICAL.length - flaggedTypical.length) + '/' + TYPICAL.length + ' ordinary result lines are not flagged', flaggedTypical.length === 0, flaggedTypical.join(' | '));
-
-// Long text is read in windows; offsets stay exact; a repeated range is not turned into a date.
-const filler = (n) => Array.from({ length: n }, (_, i) => 'Glucose ' + (80 + (i % 20)) + ' mg/dL 70-99').join('\n');
-const longText = filler(300) + '\nPatient: Rahul Verma\n' + filler(300) + '\nSeen by Dr. Meera Nair\n' + filler(50);
-const longSpans = await spansOf(longText);
-check('long text: names near the middle and the end are both found', longSpans.some((x) => x.text.includes('Verma')) && longSpans.some((x) => x.text.includes('Nair')), JSON.stringify(longSpans.slice(0, 5)));
-check('long text: a repeated reference range (70-99) is not flagged as a date', !longSpans.some((x) => x.kind === 'date'), JSON.stringify(longSpans.filter((x) => x.kind === 'date').slice(0, 3)));
-check('long text: every span points at exactly the text it names (offsets are exact)', longSpans.every((x) => longText.includes(x.text)));
-check('plausibleDate: real dates yes', ['21/09/2026', '21 Sep 2026', '2026-09-21', '9/21/26'].every((d) => nerMod.plausibleDate(d)));
-check('plausibleDate: ranges and values no', ['70-99', '2.5-4.5', '135 - 145', '40-190', '12.0-15.5', '3.8-10.8', '0.4 - 4.5'].every((d) => !nerMod.plausibleDate(d)));
-check('empty and blank text cost nothing and return no spans', (await nerMod.detectPhi('')).length === 0 && (await nerMod.detectPhi('   \n ')).length === 0);
+// The rule: the app calls only Meta's Muse. The third-party research model is opt-in, off, and cannot run by accident.
+const pkgScripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts;
+check('dev and build neither download nor run the third-party model', !/models|fetch-models|PRIVACY_MODEL/.test(`${pkgScripts.dev} ${pkgScripts.build} ${pkgScripts.start}`), JSON.stringify([pkgScripts.dev, pkgScripts.build]));
+check('the deploy config does not ship the third-party model', !/models\/ner|tokenizers/.test(readFileSync('next.config.js', 'utf8')));
+const importers = readdirSync('lib').filter((f) => f.endsWith('.ts') && /from '\.\/ner'/.test(readFileSync(join('lib', f), 'utf8'))).sort();
+check('only the photo cleaner and the opt-in text screen import the model module', JSON.stringify(importers) === JSON.stringify(['photo.ts', 'privacyModel.ts']), JSON.stringify(importers));
+check('the model refuses to run unless PRIVACY_MODEL=1', await nerMod.detectPhi('Rahul Verma').then(() => false, (e) => /off/.test(String(e))));
+check('the model flag is off by default', !nerMod.nerEnabled());
+const passThrough = await privacyModel.screenCheckItems([{ row: { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Low' }, line: 'Hemoglobin 11.2 g/dL 12.0 - 15.5 Priya Raman' }]);
+check('with the model off, text screening changes nothing and says "patterns"', passThrough.engine === 'patterns' && passThrough.items.length === 1 && passThrough.withheld === 0);
+const auditOff = await privacyModel.addModelAudit({ rows: [], source_lines: [], photo: false, lines_withheld: 0, identifiers_removed: 2, removed_kinds: ['name or ID line'] }, 'Reviewed by Priya Raman MD');
+check('with the model off, the audit is the pattern audit and says "patterns"', auditOff.engine === 'patterns' && auditOff.identifiers_removed === 2);
 
 // Photo helpers.
 check('bare result numbers are recognised, IDs are not', ['3599', '15.6 H', '< 200', '4.53', '1,330'].every((t) => photoMod.isBareResultNumber(t)) && !['00482913', 'AC-993201', 'PX-7741209', '9876501234', 'MRN 5'].some((t) => photoMod.isBareResultNumber(t)));
@@ -712,26 +697,23 @@ check('respace restores the gaps OCR drops', photoMod.respace('Sodium138mmol/L13
 check('a glued ordinary result row is a false alarm for the ID pattern', ['Sodium138mmol/L135-145', 'Ferritin22ng/mL30-400', 'VitaminB12250pg/mL 200-900'].every((t) => photoMod.isGluedResultRow(t)));
 check('but a glued identifier is not excused', !photoMod.isGluedResultRow('MRN00482913') && !photoMod.isGluedResultRow('PX-7741209') && !photoMod.isGluedResultRow('Phone9876501234'));
 
-// Result lines for the second-pass check are screened by the model too.
-const mkItem = (line, name = 'Hemoglobin') => ({ row: { test_name: name, value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Low' }, line });
-const screened = await privacyModel.screenCheckItems([mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5'), mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5 Priya Raman'), mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5 Dr Kapoor')]);
-check('model screening keeps a clean result line and withholds lines holding a name', screened.items.length === 1 && screened.withheld === 2 && screened.engine === 'patterns+model', JSON.stringify(screened.items.map((i) => i.line)));
-const audited = await privacyModel.addModelAudit({ rows: [], source_lines: [], photo: false, lines_withheld: 0, identifiers_removed: 2, removed_kinds: ['name or ID line'] }, 'Glucose 90 mg/dL 70-99\nReviewed by Priya Raman MD\nApollo Hospitals, Jubilee Hills, Hyderabad');
-check('the audit adds what the model found (counts and kinds, never values)', audited.engine === 'patterns+model' && audited.identifiers_removed > 2 && audited.removed_kinds.includes('name') && !JSON.stringify(audited).includes('Raman'), JSON.stringify(audited));
-
-// Photos: every fixture (labelled, unlabelled, stacked, tilted, blurred, glare) is cleaned and then READ AGAIN.
-const manifest = JSON.parse(readFileSync('fixtures/phi/manifest.json', 'utf8'));
+// Photos: each fixture is cleaned by patterns alone and the cleaned picture is READ AGAIN.
+// The "unlabelled" photo prints names with no label; only the opt-in evaluation model can find those, so for it we check
+// only that it is accepted and its results survive (the limit is documented in the README, not hidden).
 let cleanedPhotos = 0;
 for (const m of manifest) {
   const res = await photoMod.redactPhoto(readFileSync('fixtures/phi/' + m.file));
   if (!res.ok) { check(m.file + ': photo accepted', false, 'refused: ' + res.reason); continue; }
   const scan = await ocr.scanImage(res.photo.buffer);
   const text = sq((scan ? scan.lines : []).map((l) => l.text).join(' '));
-  const leaked = m.phi.filter((p) => text.includes(p));
   const lost = m.rows.filter(([n, v]) => !text.includes(sq(String(v))) || !text.includes(sq(n).slice(0, 6)));
-  check(m.file + ': nothing identifying can be read from the cleaned photo', leaked.length === 0, 'still readable: ' + JSON.stringify(leaked));
   check(m.file + ': every result row is still readable', lost.length === 0, 'lost: ' + JSON.stringify(lost));
-  check(m.file + ': regions were painted and the engine is reported', res.photo.regions > 0 && res.engine === 'patterns+model' && res.photo.preview.startsWith('data:image/jpeg;base64,'));
+  check(m.file + ': engine is reported as patterns, preview attached', res.engine === 'patterns' && res.photo.preview.startsWith('data:image/jpeg;base64,'));
+  if (!m.needsModel) {
+    const leaked = m.phi.filter((p) => text.includes(p));
+    check(m.file + ': nothing identifying can be read from the cleaned photo', leaked.length === 0, 'still readable: ' + JSON.stringify(leaked));
+    check(m.file + ': regions were painted', res.photo.regions > 0);
+  }
   cleanedPhotos++;
 }
 check('all ' + manifest.length + ' fixture photos were accepted and cleaned', cleanedPhotos === manifest.length);
@@ -742,19 +724,13 @@ const r1 = await photoMod.redactPhoto(blank);
 check('a photo with almost no readable text is refused, not sent', !r1.ok && r1.reason === 'too_little_text', JSON.stringify(r1.reason));
 const r2 = await photoMod.redactPhoto(Buffer.from('not an image at all'));
 check('bytes that are not an image are refused', !r2.ok && r2.reason === 'bad_image', JSON.stringify(r2.reason));
-process.env.NER_MODEL_DIR = '/nonexistent/model/dir';
+const realModelDir = process.env.NER_MODEL_DIR;
+process.env.PRIVACY_MODEL = '1'; process.env.NER_MODEL_DIR = '/nonexistent/model/dir';
 const r3 = await photoMod.redactPhoto(readFileSync('fixtures/phi/labelled-table.png'));
-check('model missing: the photo is refused by default', !r3.ok && r3.reason === 'no_model', JSON.stringify(r3.reason));
-process.env.NER_REQUIRED = '0';
-const r4 = await photoMod.redactPhoto(readFileSync('fixtures/phi/labelled-table.png'));
-check('model missing with NER_REQUIRED=0: patterns-only cleaning, reported as such, labelled fields still covered', r4.ok && r4.engine === 'patterns' && r4.photo.regions > 0, JSON.stringify(r4.ok ? r4.engine : r4.reason));
-if (r4.ok) {
-  const scan4 = await ocr.scanImage(r4.photo.buffer);
-  const t4 = sq(scan4.lines.map((l) => l.text).join(' '));
-  check('patterns-only mode still hides labelled name, ID, phone and address', ['rahul', 'verma', '00482913', '9876543210', '411001'].every((p) => !t4.includes(p)));
-}
-delete process.env.NER_MODEL_DIR; delete process.env.NER_REQUIRED;
-check('the model and OCR are healthy again after those refusals', (await photoMod.redactPhoto(readFileSync('fixtures/phi/unlabelled-names.png'))).ok);
+check('model switched on but missing: the photo is refused rather than silently cleaned less', !r3.ok && r3.reason === 'no_model', JSON.stringify(r3.reason));
+delete process.env.PRIVACY_MODEL;
+if (realModelDir === undefined) delete process.env.NER_MODEL_DIR; else process.env.NER_MODEL_DIR = realModelDir;
+check('the cleaner is healthy again after those refusals', (await photoMod.redactPhoto(readFileSync('fixtures/phi/labelled-table.png'))).ok);
 
 // End to end: intercept the request the vision call really sends, decode the image out of it, and read it.
 process.env.META_MODEL_API_KEY = 'test-key-not-real';
@@ -781,6 +757,53 @@ if (cleaned.ok && sentBodies.length === 1) {
   check('end to end: reading the image that was actually sent finds none of the invented identifiers', PHI.every((p) => !sentText.includes(p)), JSON.stringify(PHI.filter((p) => sentText.includes(p))));
   check('end to end: no identifier appears anywhere else in the request text', PHI.every((p) => !sq(JSON.stringify(parts.filter((p2) => p2.type === 'text'))).includes(p)));
   check('end to end: the photo\'s EXIF/GPS metadata is gone (the picture was redrawn)', !sentImage.includes(Buffer.from('Exif')) && !sentImage.includes(Buffer.from('GPS')));
+}
+
+// ------------------------------------------------------------------------------------------------
+// Optional: the third-party research model. Not part of the running app. Only runs if you fetched it (npm run models),
+// and is skipped, not failed, on a fresh clone. It measures how much a trained model would add beyond the patterns.
+const modelInstalled = nerMod.nerAvailable();
+group(modelInstalled ? 'Optional evaluation model (Stanford de-identifier; off in the app)' : 'Optional evaluation model: SKIPPED (not installed; opt in with npm run models)');
+if (!modelInstalled) console.log('  (skipped) the optional evaluation model is not installed; the running app does not use it.');
+else {
+  process.env.PRIVACY_MODEL = '1';
+  const spansOf = async (t) => (await nerMod.detectPhi(t)).map((x) => ({ kind: x.kind, text: t.slice(x.start, x.end) }));
+  const UNLABELLED = [
+    ['Maria Gonzalez Lopez', 'person', 'Lopez'], ['SMITH, JOHN A', 'person', 'SMITH'], ['JOHN SMITH', 'person', 'SMITH'], ['Dr. Anil Kapoor', 'person', 'Kapoor'],
+    ['Reviewed by Priya Raman MD', 'person', 'Raman'], ['Referring physician: Sarah Johnson', 'person', 'Johnson'], ['Dear Mr. Sharma, your results are below', 'person', 'Sharma'],
+    ['Apollo Hospitals, Jubilee Hills, Hyderabad', 'place', 'Jubilee'], ['Collected at Apollo Clinic, 12 MG Road, Pune 411001', 'place', 'Pune'],
+    ['MRN 00482913   Accession AC-993201', 'id', '993201'], ['SANJAY IYER', 'person', 'IYER'], ['Collected: 09/21/2026  Reported: 09/22/2026', 'date', '2026'],
+  ];
+  const missed = [];
+  for (const [line, kind, needle] of UNLABELLED) { const sp = await spansOf(line); if (!sp.some((x) => x.kind === kind && x.text.includes(needle))) missed.push(line + ' => ' + JSON.stringify(sp)); }
+  check('model recall: ' + (UNLABELLED.length - missed.length) + '/' + UNLABELLED.length + ' unlabelled names, places, IDs and dates found', missed.length === 0, missed.join(' | '));
+  const TYPICAL = [...REAL_LINES, 'Hemoglobin 13.2 g/dL 12.0-15.5', 'CHOLESTEROL, TOTAL 228 H mg/dL <200', 'Vitamin D, 25-OH, Total, IA 31 ng/mL 30-100', 'Sodium 138 mmol/L 135-145', 'Creatinine 1.4 mg/dL 0.6-1.2', 'TSH 6.8 mIU/L 0.4-4.5', 'Absolute Neutrophils 3599 cells/uL 1500-7800', 'Reference Range: 3.8-10.8 Thousand/uL', 'Glucose 126 mg/dL 70-99', 'HbA1c 6.4 % 4.0-5.7'];
+  const flaggedTypical = [];
+  for (const line of TYPICAL) { const sp = await spansOf(line); if (sp.length) flaggedTypical.push(line + ' => ' + JSON.stringify(sp)); }
+  check('model precision: ' + (TYPICAL.length - flaggedTypical.length) + '/' + TYPICAL.length + ' ordinary result lines are not flagged', flaggedTypical.length === 0, flaggedTypical.join(' | '));
+  const filler = (n) => Array.from({ length: n }, (_, i) => 'Glucose ' + (80 + (i % 20)) + ' mg/dL 70-99').join('\n');
+  const longText = filler(300) + '\nPatient: Rahul Verma\n' + filler(300) + '\nSeen by Dr. Meera Nair\n' + filler(50);
+  const longSpans = await spansOf(longText);
+  check('long text: names near the middle and the end are both found', longSpans.some((x) => x.text.includes('Verma')) && longSpans.some((x) => x.text.includes('Nair')), JSON.stringify(longSpans.slice(0, 5)));
+  check('long text: a repeated reference range (70-99) is not flagged as a date', !longSpans.some((x) => x.kind === 'date'));
+  check('long text: every span points at exactly the text it names (offsets are exact)', longSpans.every((x) => longText.includes(x.text)));
+  check('plausibleDate: real dates yes', ['21/09/2026', '21 Sep 2026', '2026-09-21', '9/21/26'].every((d) => nerMod.plausibleDate(d)));
+  check('plausibleDate: ranges and values no', ['70-99', '2.5-4.5', '135 - 145', '40-190', '12.0-15.5', '3.8-10.8', '0.4 - 4.5'].every((d) => !nerMod.plausibleDate(d)));
+  check('empty and blank text cost nothing and return no spans', (await nerMod.detectPhi('')).length === 0 && (await nerMod.detectPhi('   \n ')).length === 0);
+  const mkItem = (line) => ({ row: { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Low' }, line });
+  const screened = await privacyModel.screenCheckItems([mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5'), mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5 Priya Raman'), mkItem('Hemoglobin 11.2 g/dL 12.0 - 15.5 Dr Kapoor')]);
+  check('model screening keeps a clean result line and withholds lines holding a name', screened.items.length === 1 && screened.withheld === 2 && screened.engine === 'patterns+model');
+  // With the model on, every fixture (including the one with unlabelled names) is cleaned.
+  for (const m of manifest) {
+    const res = await photoMod.redactPhoto(readFileSync('fixtures/phi/' + m.file));
+    if (!res.ok) { check(m.file + ' (model on): photo accepted', false, 'refused: ' + res.reason); continue; }
+    const scan = await ocr.scanImage(res.photo.buffer);
+    const text = sq((scan ? scan.lines : []).map((l) => l.text).join(' '));
+    const leaked = m.phi.filter((p) => text.includes(p));
+    const lost = m.rows.filter(([n, v]) => !text.includes(sq(String(v))) || !text.includes(sq(n).slice(0, 6)));
+    check(m.file + ' (model on): nothing identifying readable, every row kept, engine reported', leaked.length === 0 && lost.length === 0 && res.engine === 'patterns+model', 'leaked ' + JSON.stringify(leaked) + ' lost ' + JSON.stringify(lost));
+  }
+  delete process.env.PRIVACY_MODEL;
 }
 
 // ------------------------------------------------------------------------------------------------

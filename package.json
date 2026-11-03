@@ -7,8 +7,8 @@
     "node": ">=18.17"
   },
   "scripts": {
-    "dev": "npm run models && next dev",
-    "build": "npm run models && node scripts/evaluate.mjs && next build",
+    "dev": "next dev",
+    "build": "node scripts/evaluate.mjs && next build",
     "start": "next start",
     "test": "node scripts/evaluate.mjs",
     "evaluate": "node scripts/evaluate.mjs",
@@ -20,7 +20,6 @@
   },
   "dependencies": {
     "@gutenye/ocr-node": "^1.4.9",
-    "@huggingface/tokenizers": "^0.2.0",
     "next": "^14.2.35",
     "onnxruntime-node": "1.31.1",
     "pdfjs-dist": "3.11.174",
@@ -28,6 +27,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@huggingface/tokenizers": "^0.2.0",
     "@types/node": "20.14.12",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",

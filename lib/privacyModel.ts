@@ -1,10 +1,11 @@
-import { detectPhi, nerAvailable, PHI_KIND_LABELS } from './ner';
+import { detectPhi, nerAvailable, nerEnabled, PHI_KIND_LABELS } from './ner';
 import type { MuseCheckItem } from './privacy';
 import { redactWithAudit } from './redact';
 import type { AiInputDisclosure } from './types';
 
-// The privacy model (lib/ner.ts) applied to text. Patterns and the "unexplained word" rule in lib/privacy.ts already
-// guard every line; this adds a trained de-identification model on top. Either one is enough to keep a line back.
+// The opt-in evaluation model (lib/ner.ts, PRIVACY_MODEL=1, off by default) applied to text. In the running app this
+// file does nothing: patterns and the "unexplained word" rule in lib/privacy.ts guard every line, and the functions
+// below return their input unchanged with engine 'patterns'.
 
 export type Engine = 'patterns+model' | 'patterns';
 
@@ -14,7 +15,7 @@ export type Engine = 'patterns+model' | 'patterns';
  * the returned engine says so.
  */
 export async function screenCheckItems(items: MuseCheckItem[]): Promise<{ items: MuseCheckItem[]; engine: Engine; withheld: number }> {
-  if (!nerAvailable()) return { items, engine: 'patterns', withheld: 0 };
+  if (!nerEnabled() || !nerAvailable()) return { items, engine: 'patterns', withheld: 0 };
   try {
     const kept: MuseCheckItem[] = [];
     for (const item of items) if ((await detectPhi(item.line)).length === 0) kept.push(item);
@@ -31,7 +32,7 @@ export async function screenCheckItems(items: MuseCheckItem[]): Promise<{ items:
  * The report text is not sent anywhere: it is inspected here, on the server, to count.
  */
 export async function addModelAudit(disclosure: AiInputDisclosure, reportText: string): Promise<AiInputDisclosure> {
-  if (!nerAvailable()) return { ...disclosure, engine: 'patterns' };
+  if (!nerEnabled() || !nerAvailable()) return { ...disclosure, engine: 'patterns' };
   try {
     const spans = await detectPhi(redactWithAudit(reportText).redacted);
     const kinds = [...new Set(spans.map((s) => PHI_KIND_LABELS[s.kind]))];

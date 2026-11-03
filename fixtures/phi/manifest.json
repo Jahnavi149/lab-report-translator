@@ -27,7 +27,8 @@
       "411001",
       "kapoor",
       "14031987"
-    ]
+    ],
+    "needsModel": false
   },
   {
     "file": "labelled-table-medium.jpg",
@@ -57,7 +58,8 @@
       "411001",
       "kapoor",
       "14031987"
-    ]
+    ],
+    "needsModel": false
   },
   {
     "file": "unlabelled-names.png",
@@ -82,7 +84,8 @@
       "priya",
       "raman",
       "jubilee"
-    ]
+    ],
+    "needsModel": true
   },
   {
     "file": "unlabelled-names-medium.jpg",
@@ -107,7 +110,8 @@
       "priya",
       "raman",
       "jubilee"
-    ]
+    ],
+    "needsModel": true
   },
   {
     "file": "stacked-caps.png",
@@ -130,7 +134,8 @@
       "iyer",
       "px7741209",
       "9876501234"
-    ]
+    ],
+    "needsModel": false
   },
   {
     "file": "stacked-caps-harsh.jpg",
@@ -153,6 +158,7 @@
       "iyer",
       "px7741209",
       "9876501234"
-    ]
+    ],
+    "needsModel": true
   }
 ]

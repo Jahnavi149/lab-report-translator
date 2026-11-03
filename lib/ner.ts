@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+// OPT-IN EVALUATION TOOL, OFF BY DEFAULT. The running app calls only Meta's Muse model and uses plain code for privacy
+// (patterns in lib/redact.ts). This module is a third-party research model (not from Meta), so nothing in the app can
+// run it unless PRIVACY_MODEL=1 is set explicitly (for local evaluation), and the deploy does not ship it. `detectPhi`
+// throws when the flag is off, so no code path can reach the model by accident.
+//
 // A trained clinical de-identification model, run inside this server (ONNX, int8). Patterns (lib/redact.ts) are exact
 // for things with a shape: emails, phones, IDs after a label. They cannot tell "Maria Gonzalez Lopez" from a test
 // name, or find a hospital address in free text. This model can: StanfordAIMI/stanford-deidentifier-base, trained on
@@ -26,6 +31,9 @@ const TIMEOUT_MS = Number(process.env.NER_TIMEOUT_MS) || 20000;
 
 const modelDir = () => process.env.NER_MODEL_DIR || join(process.cwd(), 'models', 'ner');
 const MODEL_FILES = ['config.json', 'tokenizer.json', 'tokenizer_config.json', 'model_int8.onnx'];
+
+/** True only when the model was explicitly switched on for evaluation (PRIVACY_MODEL=1). Off by default. */
+export const nerEnabled = (): boolean => process.env.PRIVACY_MODEL === '1';
 
 /** True when the model files are on disk. Callers that must not run without it check this first. */
 export function nerAvailable(): boolean {
@@ -76,6 +84,7 @@ function splitWords(text: string): Word[] {
  * Throws if the model cannot run: callers decide whether that means "refuse" or "fall back to patterns".
  */
 export async function detectPhi(text: string): Promise<PhiSpan[]> {
+  if (!nerEnabled()) throw new Error('The privacy model is off: it is an opt-in evaluation tool (PRIVACY_MODEL=1), not part of the running app.');
   if (text.trim() === '') return [];
   if (text.length > MAX_CHARS) throw new Error('Text too long for the privacy model');
   const job = (g.__labNerChain ?? Promise.resolve()).then(async () => {

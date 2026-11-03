@@ -1,4 +1,4 @@
-// Downloads the privacy model once: StanfordAIMI/stanford-deidentifier-base (MIT), the ONNX int8 build from
+// OPT-IN, for local evaluation only (never run by dev/build; the app does not use it). Downloads the model once: StanfordAIMI/stanford-deidentifier-base (MIT), the ONNX int8 build from
 // onnx-community. It is a clinical de-identification model (names, hospitals, IDs, phones, dates) that runs inside
 // this server, so report text never goes to a third party to be checked.
 //

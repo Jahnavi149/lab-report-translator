@@ -49,8 +49,8 @@ export function PhotoCropDialog({ file, onConfirm, onCancel }: { file: File; onC
       <div className="crop-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="crop-title">
         <h2 id="crop-title">Trim your photo before reading (optional)</h2>
         <p className="warn" style={{ marginTop: 0 }}>
-          <strong>Before Meta&apos;s Muse AI sees this photo, names, IDs, phone numbers, addresses and dates are found on this server and painted out,</strong>{' '}
-          and the cleaned picture is read again to check. You will see exactly what was sent. For an extra layer, trim away the header here: the trimmed part never leaves this device.
+          <strong>Before Meta&apos;s Muse AI sees this photo, labelled details (a name or ID next to &quot;Patient Name&quot;, &quot;MRN&quot;, a phone number, an email, a date of birth) are found on this server and painted out,</strong>{' '}
+          and the cleaned picture is read again to check. A name printed with no label cannot be found automatically, so please trim the header away here: the trimmed part never leaves this device. You will see exactly what was sent.
         </p>
         <div className="crop-stage">
           {/* eslint-disable-next-line @next/next/no-img-element */}

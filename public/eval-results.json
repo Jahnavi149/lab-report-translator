@@ -1,6 +1,6 @@
 {
-  "passed": 347,
-  "total": 347,
+  "passed": 341,
+  "total": 341,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -58,10 +58,15 @@
       "total": 34
     },
     {
-      "name": "Privacy model and photo cleaning (local; no network)",
-      "passed": 46,
-      "total": 46
+      "name": "Photo cleaning by patterns (what the running app does; no extra model)",
+      "passed": 40,
+      "total": 40
+    },
+    {
+      "name": "Optional evaluation model: SKIPPED (not installed; opt in with npm run models)",
+      "passed": 0,
+      "total": 0
     }
   ],
-  "generated_at": "2026-11-03T21:34:09.058Z"
+  "generated_at": "2026-11-03T21:54:51.166Z"
 }
