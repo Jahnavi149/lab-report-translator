@@ -291,6 +291,26 @@ const leftOfName = [L('9.6', 0.303, 0.02, 0.08), L('CALCIUM', 0.3, 0.3, 0.2)];
 check('portal card: a value box to the LEFT of the name is not used', ocr.matchRowToLine({ test_name: 'CALCIUM', value: 9.6, ref_low: null, ref_high: null }, leftOfName) === null);
 const blocked = [L('CALCIUM', 0.3, 0.02, 0.2), L('MAGNESIUM', 0.3, 0.4, 0.2), L('9.6', 0.303, 0.87, 0.08)];
 check('portal card: another name between the name and the value box blocks the match', ocr.matchRowToLine({ test_name: 'CALCIUM', value: 9.6, ref_low: null, ref_high: null }, blocked) === null);
+
+// Phone photos are tilted: layout is judged on the straightened page, the highlight is drawn on the photo itself.
+const q = (x0, y0, x1, y1, deg) => { // text box corners (TL, TR, BR, BL) rotated by deg about (0.5, 0.5) on a 1000x1000 image
+  const a = (deg * Math.PI) / 180, rot = ([x, y]) => [500 + (x - 500) * Math.cos(a) - (y - 500) * Math.sin(a), 500 + (x - 500) * Math.sin(a) + (y - 500) * Math.cos(a)];
+  return [rot([x0, y0]), rot([x1, y0]), rot([x1, y1]), rot([x0, y1])];
+};
+const flatCards = [q(50, 400, 300, 430, 6), q(100, 600, 450, 630, 6), q(150, 800, 500, 830, 6), q(200, 100, 600, 130, 6)];
+check('skew: the page tilt is read from the text baselines (6 degrees), and a straight page reads as 0', Math.abs(ocr.pageSkew(flatCards) * 180 / Math.PI - 6) < 0.2 && ocr.pageSkew(flatCards.map((_, k) => q(50, 100 + k * 100, 400, 130 + k * 100, 0))) === 0);
+check('skew: too few boxes, or a sideways page (45 degrees), is not treated as a tilt', ocr.pageSkew(flatCards.slice(0, 2)) === 0 && ocr.pageSkew(flatCards.map(() => q(50, 400, 300, 430, 45))) === 0);
+const tiltedName = { text: 'IRON, TOTAL', box: { x: 0.1, y: 0.45, width: 0.2, height: 0.02 }, flat: { x: 0.1, y: 0.46, width: 0.2, height: 0.02 } };
+const tiltedValue = { text: '24 L', box: { x: 0.8, y: 0.5, width: 0.07, height: 0.02 }, flat: { x: 0.8, y: 0.47, width: 0.07, height: 0.02 } };
+const tiltedAlone = ocr.matchRowToLine({ test_name: 'IRON, TOTAL', value: 24, ref_low: null, ref_high: null }, [tiltedName, tiltedValue]);
+check('tilted card: the value box is on the same row only on the straightened page, and the drawn box covers both on the photo', tiltedAlone && tiltedAlone.x === 0.1 && tiltedAlone.y === 0.45 && tiltedAlone.x + tiltedAlone.width >= 0.87);
+const noFlatValue = { text: '24 L', box: { x: 0.8, y: 0.5, width: 0.07, height: 0.02 } };
+check('the same tilted geometry without straightening is (correctly) not a same-row match', ocr.matchRowToLine({ test_name: 'IRON, TOTAL', value: 24, ref_low: null, ref_high: null }, [{ text: 'IRON, TOTAL', box: tiltedName.box }, noFlatValue]) === null);
+check('merged line: "Reference Range:40-190 mcg/dL 24L" under the name confirms the value', ocr.matchRowToLine({ test_name: 'IRON, TOTAL', value: 24, ref_low: 40, ref_high: 190 }, [L('IRON,TOTAL', 0.44), L('Reference Range:40-190 mcg/dL 24L', 0.47, 0.02, 0.9)]) !== null);
+check('merged line: a value that is only a range bound does not count (190 against 40-190)', ocr.matchRowToLine({ test_name: 'IRON, TOTAL', value: 190, ref_low: 40, ref_high: 190 }, [L('IRON,TOTAL', 0.44), L('Reference Range:40-190 mcg/dL', 0.47, 0.02, 0.5)]) === null);
+check('merged line: the value must be the last number, so "Reference Range: 3.8-10.8 Thousand/uL" never confirms 3.8', !ocr.valueEndsRangeLine('Reference Range: 3.8-10.8 Thousand/uL', { test_name: 'x', value: 3.8, ref_low: 3.8, ref_high: 10.8 }) && ocr.valueEndsRangeLine('Reference Range: 3.8-10.8 Thousand/uL 5.3', { test_name: 'x', value: 5.3, ref_low: 3.8, ref_high: 10.8 }));
+const diff = [L('NEUTROPHILS', 0.495, 0.08, 0.2), L('% 67.9', 0.502, 0.075, 0.82), L('LYMPHOCYTES', 0.559, 0.08, 0.2), L('% 25.1', 0.566, 0.075, 0.82)];
+check('merged value and unit ("% 67.9", pulled left of the name) still belongs to the name on its left', (() => { const a = ocr.matchRowToLine({ test_name: 'NEUTROPHILS', value: 67.9, ref_low: null, ref_high: null }, diff), b = ocr.matchRowToLine({ test_name: 'LYMPHOCYTES', value: 25.1, ref_low: null, ref_high: null }, diff); return a && b && a.y < 0.51 && b.y >= 0.55; })());
 const neighbours = [L('CALCIUM', 0.3), L('9.6', 0.303, 0.87, 0.08), L('MAGNESIUM 2.0 mg/dL', 0.3, 0.55, 0.3)];
 check('portal card: a long text beside the name (another test) is never treated as the value box', ocr.matchRowToLine({ test_name: 'MAGNESIUM', value: 9.6, ref_low: null, ref_high: null }, neighbours) === null);
 const dupCards = [...card('GLUCOSE', 0.2, '91', '65-99 mg/dL'), ...card('GLUCOSE', 0.5, '91', '65-99 mg/dL')];

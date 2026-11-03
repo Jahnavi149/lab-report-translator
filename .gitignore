@@ -14,3 +14,4 @@ eval/photos/*
 !eval/photos/.gitkeep
 eval/.cache/
 eval/report/
+eval/phone-sim/

@@ -14,6 +14,7 @@
     "evaluate": "node scripts/evaluate.mjs",
     "typecheck": "tsc --noEmit",
     "review:citations": "node scripts/review-citations.mjs",
+    "evaluate:phone": "node scripts/simulate-phone.mjs",
     "samples": "node scripts/make-samples.mjs"
   },
   "dependencies": {
