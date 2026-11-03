@@ -9,6 +9,14 @@ export interface PdfSourceAnchor {
   rects: { x: number; y: number; width: number; height: number }[];
 }
 
+/** A location in an uploaded photo, as fractions of the image (0 to 1) from its top-left corner. */
+export interface ImageSourceBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr'];
 
 export interface LabRow {
@@ -26,6 +34,8 @@ export interface LabRow {
   review_reason?: string;
   source_text: string;
   source_anchor?: PdfSourceAnchor;
+  /** Photo uploads only: where the model says this line is in the image. Never used for values or flags. */
+  source_box?: ImageSourceBox;
 }
 
 export interface LabReport {

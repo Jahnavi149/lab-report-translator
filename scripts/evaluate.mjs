@@ -318,8 +318,8 @@ eq('translation: unsafe explanation is omitted, safe one kept', Object.keys(tr.e
 
 // Vision output is sanitised and cross-checked against its own quoted line.
 calls = mockMuse(() => ({ rows: [
-  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' },
-  { test_name: 'Sodium<script>', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'Sodium 41 mmol/L 135 - 145' },
+  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5', box: [100, 200, 900, 240] },
+  { test_name: 'Sodium<script>', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'Sodium 41 mmol/L 135 - 145', box: [900, 200, 100, 240] },
   { test_name: 'Bad', value: 'abc' }, { test_name: '', value: 3 },
   { test_name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 99, ref_high: 70, source_text: 'Glucose 90 mg/dL 70 - 99' },
 ] }));
@@ -328,6 +328,12 @@ eq('vision: malformed rows dropped, 3 kept', vis.length, 3);
 check('vision: markup stripped from names', vis.every((r) => !/[<>]/.test(r.test_name)));
 check('vision: row whose numbers are not on its quoted line is marked inconsistent', vis.find((r) => r.test_name.startsWith('Sodium')).consistent === false && vis[0].consistent === true);
 check('vision: impossible range (low > high) is discarded, not trusted', vis.find((r) => r.test_name === 'Glucose').ref_low === null);
+eq('vision: a good box becomes fractions of the image', vis[0].box, { x: 0.1, y: 0.2, width: 0.8, height: 0.04 });
+check('vision: an inverted box is dropped, not trusted', vis.find((r) => r.test_name.startsWith('Sodium')).box === null);
+check('vision: a missing box is just null (the row still reads)', vis.find((r) => r.test_name === 'Glucose').box === null);
+for (const [bad, why] of [[[0, 0, 1000, 1000], 'covers the whole page'], [[10, 10, 11, 12], 'tiny'], [[1, 2, 3], 'wrong length'], ['a,b,c,d', 'not an array'], [[0, 0, 500, 'x'], 'non-number'], [[NaN, 0, 5, 5], 'NaN']]) check(`parseBox rejects a box that is ${why}`, muse.parseBox(bad) === null);
+const clamped = muse.parseBox([-50, 100, 1200, 140]);
+check('parseBox clamps to the image edges', clamped && clamped.x === 0 && Math.abs(clamped.width - 1) < 1e-9);
 check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/png;base64,'));
 globalThis.fetch = realFetch;
 delete process.env.META_MODEL_API_KEY;

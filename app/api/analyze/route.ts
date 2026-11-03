@@ -73,6 +73,7 @@ export async function POST(req: Request) {
           confidence: 'low',
           review_reason: r.consistent ? 'Read from a photo: check this row against your original.' : 'Read from a photo, and the numbers do not all match the line that was quoted. Check this row against your original.',
           source_text: r.source_text,
+          ...(r.box ? { source_box: r.box } : {}),
         };
       });
       const enhanced = await enhanceWithMuse(rows);

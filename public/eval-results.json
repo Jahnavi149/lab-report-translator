@@ -1,6 +1,6 @@
 {
-  "passed": 226,
-  "total": 226,
+  "passed": 236,
+  "total": 236,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -44,9 +44,9 @@
     },
     {
       "name": "Muse pipeline against a mocked Meta API (no network)",
-      "passed": 35,
-      "total": 35
+      "passed": 45,
+      "total": 45
     }
   ],
-  "generated_at": "2026-11-02T04:16:21.013Z"
+  "generated_at": "2026-11-03T01:14:21.965Z"
 }
