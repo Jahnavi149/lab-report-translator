@@ -3,9 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatRangeCompact } from '@/lib/flags';
 import { flagLabel, uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types';
+import { normalizeImage } from '@/lib/clientImage';
 import { buildShareText, whatsappUrl } from '@/lib/share';
 import { DoctorSheet } from './DoctorSheet';
 import { FamilyHandout } from './FamilyHandout';
+import { ImageCitationViewer } from './ImageCitationViewer';
 import { PdfCitationViewer } from './PdfCitationViewer';
 
 const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', ml: 'Malayalam · മലയാളം', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी' };
@@ -31,6 +33,9 @@ export default function Home() {
   const [translating, setTranslating] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [sourceAnchor, setSourceAnchor] = useState<LabRow['source_anchor'] | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [sourceBox, setSourceBox] = useState<LabRow['source_box'] | null>(null);
+  const [sourceQuote, setSourceQuote] = useState('');
   const listenToken = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -79,13 +84,16 @@ export default function Home() {
     if (!file) return;
     setError(''); setLoading(true); setShowDoctor(false);
     try {
-      const form = new FormData(); form.append('file', file);
+      const upload = await normalizeImage(file);
+      const form = new FormData(); form.append('file', upload);
       const res = await fetch('/api/analyze', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not read that file.');
       setReport(data as LabReport);
       setPdfFile(data.source_kind === 'pdf' ? file : null);
       setSourceAnchor(null);
+      setImageFile(data.source_kind === 'photo' ? upload : null);
+      setSourceBox(null);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not read that file.'); }
     finally { setLoading(false); if (fileInput.current) fileInput.current.value = ''; }
   }
@@ -148,7 +156,7 @@ export default function Home() {
   useEffect(() => { stopListen(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
 
-  function startNew() { setReport(null); setPdfFile(null); setSourceAnchor(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
+  function startNew() { setReport(null); setPdfFile(null); setSourceAnchor(null); setImageFile(null); setSourceBox(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
   function clearAll() { startNew(); setError(''); }
 
   const shareText = report ? buildShareText({ title: report.title, summary: display.summary, questions: display.questions, questionsHeading: ui.questionsToAsk, disclaimer: ui.infoOnly, synthetic: report.is_synthetic }) : '';
@@ -164,7 +172,11 @@ export default function Home() {
   const fromPhoto = report?.muse_features?.includes('photo reading') ?? false;
   function citeRow(row: LabRow) {
     if (pdfFile && row.source_anchor) setSourceAnchor(row.source_anchor);
+    if (imageFile && row.source_box) { setSourceBox(row.source_box); setSourceQuote(row.source_text); }
   }
+  // The Source column appears for a PDF, or for a photo once at least one line could be located in it.
+  const showSource = Boolean(pdfFile) || Boolean(imageFile && report?.rows.some((r) => r.source_box));
+  const sourceName = pdfFile ? 'PDF' : 'photo';
 
   return (
     <>
@@ -227,7 +239,7 @@ export default function Home() {
             <ul className="bigtext">{display.summary.map((s, i) => <li key={i} className={listenIdx === i ? 'speaking' : ''}>{s}</li>)}</ul>
             <h3>{ui.resultsHeading}</h3>
             <table>
-              <thead><tr><th>{ui.testCol}</th><th>{ui.valueCol}</th><th>{ui.rangeCol}</th><th>{ui.flagCol}</th><th>{ui.meaningCol}</th>{pdfFile && <th>Source</th>}</tr></thead>
+              <thead><tr><th>{ui.testCol}</th><th>{ui.valueCol}</th><th>{ui.rangeCol}</th><th>{ui.flagCol}</th><th>{ui.meaningCol}</th>{showSource && <th>Source</th>}</tr></thead>
               <tbody>
                 {report.rows.map((r) => (
                   <tr key={r.test_name}>
@@ -247,9 +259,9 @@ export default function Home() {
                     <td data-label={ui.rangeCol}>{rangeText(r, 'Range not on report')}</td>
                     <td data-label={ui.flagCol}><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></td>
                     <td data-label={ui.meaningCol}>{display.explain(r)}</td>
-                    {pdfFile && <td data-label="Source">{r.source_anchor
-                      ? <button type="button" className="pdf-citation-button" onClick={() => citeRow(r)} title="View this result in the PDF" aria-label={`View ${r.test_name} in the PDF`}>🔎 <span>View</span></button>
-                      : <span aria-label="No PDF location available">—</span>}</td>}
+                    {showSource && <td data-label="Source">{(pdfFile ? r.source_anchor : r.source_box)
+                      ? <button type="button" className="pdf-citation-button" onClick={() => citeRow(r)} title={`View this result in the ${sourceName}`} aria-label={`View ${r.test_name} in the ${sourceName}`}>🔎 <span>View</span></button>
+                      : <span aria-label={`No ${sourceName} location available`}>—</span>}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -263,6 +275,7 @@ export default function Home() {
             </div>
           </section>
           {pdfFile && sourceAnchor && <PdfCitationViewer file={pdfFile} anchor={sourceAnchor} onClose={() => setSourceAnchor(null)} />}
+          {imageFile && sourceBox && <ImageCitationViewer file={imageFile} box={sourceBox} quote={sourceQuote} onClose={() => setSourceBox(null)} />}
           </div>
         )}
 

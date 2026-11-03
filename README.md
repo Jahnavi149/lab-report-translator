@@ -11,7 +11,7 @@ Built with Next.js 14, TypeScript and plain CSS. No database, no accounts, nothi
 ## What it does
 
 - **Exact values, units and printed ranges**, copied from the report. Never invented.
-- **PDF source citations**: use the Source column to open the uploaded PDF in a side drawer and highlight the source line.
+- **Source citations**: use the Source column to open your uploaded PDF or photo in a side drawer with the source line highlighted. For photos, local OCR (Tesseract, run inside this server) finds every printed line and plain code matches each result to the one line holding its test name and value. If no single line matches, that row simply has no button: a missing highlight, never a wrong one. The browser first redraws the photo upright, on white, at a readable size, so what you see, what OCR reads and what Muse reads are the same picture.
 - **Flags decided by plain code** (`lib/flags.ts`): High / Low / Normal by comparing the value to the printed range, or **Unknown** when no range is printed. If a report prints several different ranges for one test, the app refuses to pick one and marks the row Needs Review.
 - **One plain-English line per test**, a **3-line summary**, and **3 doctor questions** built from flagged or Unknown rows.
 - **9 languages.** Summary, explanations and questions are translated by Muse Spark. The interface itself is translated for Telugu, Hindi and Spanish.
