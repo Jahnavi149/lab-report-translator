@@ -1,6 +1,6 @@
 {
-  "passed": 236,
-  "total": 236,
+  "passed": 242,
+  "total": 242,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -43,10 +43,15 @@
       "total": 21
     },
     {
+      "name": "Photo citations: OCR finds the line, code matches it",
+      "passed": 16,
+      "total": 16
+    },
+    {
       "name": "Muse pipeline against a mocked Meta API (no network)",
-      "passed": 45,
-      "total": 45
+      "passed": 35,
+      "total": 35
     }
   ],
-  "generated_at": "2026-11-03T01:14:21.965Z"
+  "generated_at": "2026-11-03T01:25:17.862Z"
 }

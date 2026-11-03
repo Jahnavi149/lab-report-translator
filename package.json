@@ -3,7 +3,9 @@
   "version": "0.3.0",
   "private": true,
   "license": "MIT",
-  "engines": { "node": ">=18.17" },
+  "engines": {
+    "node": ">=18.17"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/evaluate.mjs && next build",
@@ -14,10 +16,12 @@
     "samples": "node scripts/make-samples.mjs"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
     "next": "^14.2.35",
     "pdfjs-dist": "3.11.174",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "20.14.12",

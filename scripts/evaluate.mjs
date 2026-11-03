@@ -21,7 +21,8 @@ const safety = load('safety');
 const { SAMPLES } = load('samples');
 const i18n = load('i18n');
 const share = load('share');
-const { extractPdfText } = load('pdftext');
+const { extractPdfText, extractPdfTextWithAnchors } = load('pdftext');
+const ocr = load('ocr');
 
 const groups = [];
 let current;
@@ -217,6 +218,62 @@ for (const lang of ['en', 'te', 'hi', 'es']) {
 }
 
 // ------------------------------------------------------------------------------------------------
+group('Photo citations: OCR finds the line, code matches it');
+// Synthetic OCR output: three table rows plus a header, in pixels of a 1000 x 1000 photo.
+const W = (text, x0, y0) => ({ text, x0, y0, x1: x0 + text.length * 12, y1: y0 + 24 });
+const ocrWords = [
+  W('Test', 100, 100), W('Result', 400, 100),
+  ...[['Total', 100, 200], ['Cholesterol', 170, 202], ['230', 400, 200], ['mg/dL', 500, 200]].map(([t, x, y]) => W(t, x, y)),
+  ...[['HDL', 100, 260], ['Cholesterol', 150, 262], ['38', 400, 260], ['mg/dL', 500, 260]].map(([t, x, y]) => W(t, x, y)),
+  ...[['Hemoglobin', 100, 320], ['11.2', 400, 322], ['g/dL', 500, 320], ['12.0', 600, 320], ['-', 660, 320], ['15.5', 690, 320]].map(([t, x, y]) => W(t, x, y)),
+];
+const ocrLinesSynthetic = ocr.groupWordsIntoLines(ocrWords, 1000, 1000);
+eq('words on one baseline become one line, in reading order', ocrLinesSynthetic.map((l) => l.text), ['Test Result', 'Total Cholesterol 230 mg/dL', 'HDL Cholesterol 38 mg/dL', 'Hemoglobin 11.2 g/dL 12.0 - 15.5']);
+const hbBox = ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 11.2, ref_low: 12, ref_high: 15.5 }, ocrLinesSynthetic);
+check('a row is matched to the line holding its name and value', hbBox && Math.abs(hbBox.y - 0.317) < 0.01 && hbBox.x < 0.11 && hbBox.width > 0.5, JSON.stringify(hbBox));
+check('HDL (38) is not confused with Total Cholesterol (230)', ocr.matchRowToLine({ test_name: 'HDL Cholesterol', value: 38, ref_low: 40, ref_high: null }, ocrLinesSynthetic)?.y > 0.25);
+eq('a value that is not on any line gives no citation', ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 12.2, ref_low: null, ref_high: null }, ocrLinesSynthetic), null);
+eq('a name that is not on the line gives no citation', ocr.matchRowToLine({ test_name: 'Ferritin', value: 230, ref_low: null, ref_high: null }, ocrLinesSynthetic), null);
+check('one OCR typo in the name is tolerated', ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 11.2, ref_low: null, ref_high: null }, ocr.groupWordsIntoLines([W('Hemogiobin', 100, 320), W('11.2', 400, 320)], 1000, 1000)) !== null);
+const twin = ocr.groupWordsIntoLines([W('Hemoglobin', 100, 100), W('11.2', 400, 100), W('Hemoglobin', 100, 200), W('11.2', 400, 200)], 1000, 1000);
+eq('two identical lines are ambiguous, so no citation rather than a guess', ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 11.2, ref_low: null, ref_high: null }, twin), null);
+const twinRange = ocr.groupWordsIntoLines([W('Hemoglobin', 100, 100), W('11.2', 400, 100), W('12.0', 500, 100), W('Hemoglobin', 100, 200), W('11.2', 400, 200), W('13.0', 500, 200)], 1000, 1000);
+check('printed range bounds break a tie', ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 11.2, ref_low: 13, ref_high: null }, twinRange)?.y > 0.15);
+check('"Hemoglobin (2)" matches on the name without the suffix', ocr.matchRowToLine({ test_name: 'Hemoglobin (2)', value: 11.2, ref_low: null, ref_high: null }, ocrLinesSynthetic) !== null);
+const pngHeader = readFileSync('public/sample-photo.png');
+eq('PNG size is read from the header', [ocr.imageInfo(pngHeader).width, ocr.imageInfo(pngHeader).height], [1530, 1980]);
+const fakeJpeg = (orientation) => {
+  const tiff = Buffer.alloc(26); tiff.write('MM', 0); tiff.writeUInt16BE(42, 2); tiff.writeUInt32BE(8, 4); tiff.writeUInt16BE(1, 8); tiff.writeUInt16BE(0x0112, 10); tiff.writeUInt16BE(3, 12); tiff.writeUInt32BE(1, 14); tiff.writeUInt16BE(orientation, 18);
+  const app1 = Buffer.concat([Buffer.from('Exif\0\0'), tiff]);
+  const head = Buffer.from([0xff, 0xd8, 0xff, 0xe1, 0, 0]); head.writeUInt16BE(app1.length + 2, 4);
+  const sof = Buffer.from([0xff, 0xc0, 0, 11, 8, 0x03, 0xe8, 0x07, 0xd0, 1, 1, 0x11, 0]); // height 1000, width 2000
+  return Buffer.concat([head, app1, sof]);
+};
+eq('JPEG size and stored rotation are read (upright)', [ocr.imageInfo(fakeJpeg(1)).width, ocr.imageInfo(fakeJpeg(1)).height, ocr.imageInfo(fakeJpeg(1)).orientation], [2000, 1000, 1]);
+eq('JPEG stored rotation 6 is detected', ocr.imageInfo(fakeJpeg(6)).orientation, 6);
+eq('a rotated JPEG gets no citations (boxes would not line up)', await ocr.ocrLines(fakeJpeg(6)), []);
+eq('garbage bytes give no citations and no crash', await ocr.ocrLines(Buffer.from('not an image at all')), []);
+
+// Real OCR on the real sample photo, scored against where the PDF says each line is (the photo is that page at 2.5x).
+console.log = () => {};
+const realOcr = await ocr.ocrLines(readFileSync('public/sample-photo.png'));
+const withAnchors = await extractPdfTextWithAnchors(readFileSync('public/sample-report.pdf'));
+console.log = realLog;
+const truthRows = parseLabTextDetailed(withAnchors.text, withAnchors.lineAnchors).rows;
+let shown = 0, correct = 0;
+for (const r of truthRows) {
+  const box = ocr.matchRowToLine(r, realOcr);
+  if (!box) continue;
+  shown++;
+  const rects = r.source_anchor.rects;
+  const top = Math.min(...rects.map((q) => 792 - (q.y + q.height))) * 2.5 / 1980, bottom = Math.max(...rects.map((q) => 792 - q.y)) * 2.5 / 1980;
+  const centre = box.y + box.height / 2;
+  if (centre >= top - 0.004 && centre <= bottom + 0.004 && box.x < 0.12 && box.x + box.width > 0.4) correct++;
+}
+check(`real OCR on the sample photo: every highlight shown is on the right line (${correct}/${shown})`, shown > 0 && correct === shown);
+check(`real OCR on the sample photo: every one of the ${truthRows.length} rows gets a citation (${shown})`, shown === truthRows.length);
+
+// ------------------------------------------------------------------------------------------------
 group('Muse pipeline against a mocked Meta API (no network)');
 const muse = load('muse');
 const { enhanceWithMuse } = load('enhance');
@@ -318,8 +375,8 @@ eq('translation: unsafe explanation is omitted, safe one kept', Object.keys(tr.e
 
 // Vision output is sanitised and cross-checked against its own quoted line.
 calls = mockMuse(() => ({ rows: [
-  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5', box: [100, 200, 900, 240] },
-  { test_name: 'Sodium<script>', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'Sodium 41 mmol/L 135 - 145', box: [900, 200, 100, 240] },
+  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' },
+  { test_name: 'Sodium<script>', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'Sodium 41 mmol/L 135 - 145' },
   { test_name: 'Bad', value: 'abc' }, { test_name: '', value: 3 },
   { test_name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 99, ref_high: 70, source_text: 'Glucose 90 mg/dL 70 - 99' },
 ] }));
@@ -328,12 +385,6 @@ eq('vision: malformed rows dropped, 3 kept', vis.length, 3);
 check('vision: markup stripped from names', vis.every((r) => !/[<>]/.test(r.test_name)));
 check('vision: row whose numbers are not on its quoted line is marked inconsistent', vis.find((r) => r.test_name.startsWith('Sodium')).consistent === false && vis[0].consistent === true);
 check('vision: impossible range (low > high) is discarded, not trusted', vis.find((r) => r.test_name === 'Glucose').ref_low === null);
-eq('vision: a good box becomes fractions of the image', vis[0].box, { x: 0.1, y: 0.2, width: 0.8, height: 0.04 });
-check('vision: an inverted box is dropped, not trusted', vis.find((r) => r.test_name.startsWith('Sodium')).box === null);
-check('vision: a missing box is just null (the row still reads)', vis.find((r) => r.test_name === 'Glucose').box === null);
-for (const [bad, why] of [[[0, 0, 1000, 1000], 'covers the whole page'], [[10, 10, 11, 12], 'tiny'], [[1, 2, 3], 'wrong length'], ['a,b,c,d', 'not an array'], [[0, 0, 500, 'x'], 'non-number'], [[NaN, 0, 5, 5], 'NaN']]) check(`parseBox rejects a box that is ${why}`, muse.parseBox(bad) === null);
-const clamped = muse.parseBox([-50, 100, 1200, 140]);
-check('parseBox clamps to the image edges', clamped && clamped.x === 0 && Math.abs(clamped.width - 1) < 1e-9);
 check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/png;base64,'));
 globalThis.fetch = realFetch;
 delete process.env.META_MODEL_API_KEY;
@@ -358,4 +409,6 @@ console.log('='.repeat(60));
 console.log(`${passed}/${total} checks passed`);
 mkdirSync('public', { recursive: true });
 writeFileSync('public/eval-results.json', JSON.stringify({ passed, total, groups: groups.map(({ name, passed: p, total: t }) => ({ name, passed: p, total: t })), generated_at: new Date().toISOString() }, null, 2) + '\n');
+// The OCR worker is a long-lived thread in the server; end it here so this script can exit.
+await globalThis.__labOcrWorker?.then((w) => w.terminate()).catch(() => {});
 if (passed !== total) process.exit(1);

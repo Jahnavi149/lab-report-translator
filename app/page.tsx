@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatRangeCompact } from '@/lib/flags';
 import { flagLabel, uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types';
+import { normalizeImage } from '@/lib/clientImage';
 import { buildShareText, whatsappUrl } from '@/lib/share';
 import { DoctorSheet } from './DoctorSheet';
 import { FamilyHandout } from './FamilyHandout';
@@ -83,14 +84,15 @@ export default function Home() {
     if (!file) return;
     setError(''); setLoading(true); setShowDoctor(false);
     try {
-      const form = new FormData(); form.append('file', file);
+      const upload = await normalizeImage(file);
+      const form = new FormData(); form.append('file', upload);
       const res = await fetch('/api/analyze', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not read that file.');
       setReport(data as LabReport);
       setPdfFile(data.source_kind === 'pdf' ? file : null);
       setSourceAnchor(null);
-      setImageFile(data.source_kind === 'photo' ? file : null);
+      setImageFile(data.source_kind === 'photo' ? upload : null);
       setSourceBox(null);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not read that file.'); }
     finally { setLoading(false); if (fileInput.current) fileInput.current.value = ''; }

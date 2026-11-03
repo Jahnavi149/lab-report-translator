@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { enhanceWithMuse } from '@/lib/enhance';
 import { applyFlags, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, museConfigured } from '@/lib/muse';
+import { matchRowToLine, ocrLines } from '@/lib/ocr';
 import { parseLabTextDetailed } from '@/lib/parse';
 import { extractPdfTextWithAnchors } from '@/lib/pdftext';
 import { rateLimited } from '@/lib/ratelimit';
@@ -14,6 +15,10 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 const MAX_BYTES = 10 * 1024 * 1024;
+const citationBox = (test_name: string, r: { value: number; unit: string; ref_low: number | null; ref_high: number | null }, ocr: Awaited<ReturnType<typeof ocrLines>>) => {
+  const box = matchRowToLine({ test_name, ...r }, ocr);
+  return box ? { source_box: box } : {};
+};
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 // Trust file contents, not the filename or the declared MIME type.
@@ -58,7 +63,8 @@ export async function POST(req: Request) {
     } else {
       if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);
       if (rateLimited(req, 'vision', 10)) return fail('Too many photo uploads from this connection. Please wait a few minutes and try again.', 429);
-      const vision = await extractFromImageWithMuse(buffer, `image/${kind}`);
+      // Muse reads the values; OCR (run alongside it, locally) finds where each line is on the photo.
+      const [vision, ocr] = await Promise.all([extractFromImageWithMuse(buffer, `image/${kind}`), ocrLines(buffer)]);
       if (vision.length === 0) return fail('No lab results could be read from this photo. Try a flatter, brighter, closer photo, or upload a digital PDF.');
       const seen = new Map<string, number>();
       const rows: LabRow[] = applyFlags(vision).map((r) => {
@@ -73,7 +79,7 @@ export async function POST(req: Request) {
           confidence: 'low',
           review_reason: r.consistent ? 'Read from a photo: check this row against your original.' : 'Read from a photo, and the numbers do not all match the line that was quoted. Check this row against your original.',
           source_text: r.source_text,
-          ...(r.box ? { source_box: r.box } : {}),
+          ...citationBox(name, r, ocr),
         };
       });
       const enhanced = await enhanceWithMuse(rows);

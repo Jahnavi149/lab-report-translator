@@ -46,7 +46,7 @@ export function ImageCitationViewer({ file, box, quote, onClose }: { file: File;
       <button className="pdf-drawer-backdrop" type="button" onClick={onClose} aria-label="Close photo viewer" tabIndex={-1} />
       <aside className="pdf-citation-panel" role="dialog" aria-modal="true" aria-label="Original photo source">
         <div className="pdf-citation-head">
-          <div><strong>Original photo</strong><div className="muted small">The outline is approximate. The result was read from: <code>{quote}</code></div></div>
+          <div><strong>Original photo</strong><div className="muted small">Outlined: the line this result was read from, <code>{quote}</code></div></div>
           <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close photo viewer">Close</button>
         </div>
         <div className="pdf-view-scroll" ref={scrollRef}>
