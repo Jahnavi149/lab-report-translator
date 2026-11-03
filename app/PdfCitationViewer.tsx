@@ -76,7 +76,7 @@ export function PdfCitationViewer({ file, anchor, onClose }: { file: File; ancho
 
   useEffect(() => {
     let cancelled = false;
-    let renderTask: { cancel: () => void } | undefined;
+    let renderTask: { cancel: () => void; promise: Promise<unknown> } | undefined;
     void (async () => {
       if (!pdf || !canvasRef.current || pageNumber < 1 || pageNumber > pdf.numPages) return;
       try {
