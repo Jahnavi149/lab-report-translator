@@ -1,6 +1,6 @@
 import { flagFor, plainEnglishFor } from './flags';
 import { sanitizeTestName } from './safety';
-import type { Flag, FlagSource, LabRow } from './types';
+import type { Flag, FlagSource, LabRow, PdfSourceAnchor } from './types';
 
 const NUM = '\\d[\\d,]*(?:\\.\\d+)?';
 const num = (s: string) => Number(s.replace(/,/g, ''));
@@ -52,12 +52,12 @@ function parseRange(rest: string): { low: number | null; high: number | null; am
   return { low: null, high: null, ambiguous: true };
 }
 
-export function parseLabTextDetailed(text: string): ParseResult {
+export function parseLabTextDetailed(text: string, lineAnchors?: PdfSourceAnchor[]): ParseResult {
   const rows: LabRow[] = [];
   const skipped: string[] = [];
   const seen = new Map<string, number>();
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const [lineIndex, rawLine] of text.split(/\r?\n/).entries()) {
     const line = rawLine.trim().replace(/[–—−]/g, '-').replace(/\s+/g, ' ');
     if (line.length < 4 || NOT_A_RESULT.test(line)) continue;
     if (!/\d/.test(line)) continue;
@@ -102,6 +102,7 @@ export function parseLabTextDetailed(text: string): ParseResult {
       confidence: reviewReason ? 'low' : 'high',
       ...(reviewReason ? { review_reason: reviewReason } : {}),
       source_text: line,
+      ...(lineAnchors?.[lineIndex] ? { source_anchor: lineAnchors[lineIndex] } : {}),
     });
   }
   return { rows, skipped };

@@ -3,6 +3,12 @@ export type Confidence = 'high' | 'low';
 export type Language = 'en' | 'te' | 'hi' | 'es' | 'ta' | 'kn' | 'ml' | 'bn' | 'mr';
 export type FlagSource = 'range' | 'report_marker' | 'none';
 
+/** A location in the original PDF. Rectangles use PDF coordinates (origin at bottom-left). */
+export interface PdfSourceAnchor {
+  page: number;
+  rects: { x: number; y: number; width: number; height: number }[];
+}
+
 export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr'];
 
 export interface LabRow {
@@ -19,6 +25,7 @@ export interface LabRow {
   /** Set whenever confidence is low, so the UI can say exactly why. */
   review_reason?: string;
   source_text: string;
+  source_anchor?: PdfSourceAnchor;
 }
 
 export interface LabReport {
@@ -35,6 +42,7 @@ export interface LabReport {
   muse_features?: string[];
   /** Lines that looked like results but could not be read safely. */
   skipped_lines?: string[];
+  source_kind?: 'pdf' | 'photo';
 }
 
 /** Muse translation, item by item. A null item failed validation and stays in English. */
