@@ -4,6 +4,7 @@ import { applyFlags, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, museConfigured } from '@/lib/muse';
 import { matchRowToLine, ocrLines } from '@/lib/ocr';
 import { parseLabTextDetailed } from '@/lib/parse';
+import { buildAiInput } from '@/lib/privacy';
 import { extractPdfTextWithAnchors } from '@/lib/pdftext';
 import { rateLimited } from '@/lib/ratelimit';
 import { verifyRows } from '@/lib/verify';
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       const parsed = parseLabTextDetailed(text, extracted.lineAnchors);
       if (parsed.rows.length === 0) return fail('No lab results could be read from this file. If it is a scan or photo, upload it as an image instead, or try the example report.');
       const verification = verifyRows(parsed.rows, text);
-      const enhanced = await enhanceWithMuse(verification.rows, { sourceText: text });
+      const enhanced = await enhanceWithMuse(verification.rows, { check: true });
       const museNote = enhanced.flaggedByMuse.length > 0 ? ` Muse's second check also could not confirm: ${enhanced.flaggedByMuse.join(', ')}.` : '';
       const skippedNote = parsed.skipped.length > 0 ? ` ${parsed.skipped.length} line${parsed.skipped.length === 1 ? '' : 's'} looked like results but could not be read safely and ${parsed.skipped.length === 1 ? 'was' : 'were'} left out.` : '';
       report = {
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
         source_note: 'Read from your PDF. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: enhanced.features.length > 0, muse_features: enhanced.features,
         skipped_lines: parsed.skipped.slice(0, 10),
+        ai_input: buildAiInput(enhanced.rows, { reportText: text, photo: false, checked: true }),
       };
     } else {
       if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);
@@ -90,6 +92,7 @@ export async function POST(req: Request) {
         verification_note: 'Read from a photo with Muse Spark vision. A photo cannot be checked against document text the way a digital PDF can, so every row is marked Needs Review. Please compare each value with your original report before sharing.',
         source_note: 'Read from your photo. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: true, muse_features: ['photo reading', ...enhanced.features],
+        ai_input: buildAiInput(enhanced.rows, { photo: true, checked: false }),
       };
     }
     return NextResponse.json(report);

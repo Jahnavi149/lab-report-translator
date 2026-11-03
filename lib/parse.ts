@@ -1,5 +1,5 @@
 import { flagFor, plainEnglishFor } from './flags';
-import { sanitizeTestName } from './safety';
+import { isIdentifyingLine, sanitizeTestName } from './safety';
 import type { Flag, FlagSource, LabRow, PdfSourceAnchor } from './types';
 
 const NUM = '\\d[\\d,]*(?:\\.\\d+)?';
@@ -59,7 +59,8 @@ export function parseLabTextDetailed(text: string, lineAnchors?: PdfSourceAnchor
 
   for (const [lineIndex, rawLine] of text.split(/\r?\n/).entries()) {
     const line = rawLine.trim().replace(/[–—−]/g, '-').replace(/\s+/g, ' ');
-    if (line.length < 4 || NOT_A_RESULT.test(line)) continue;
+    // "MRN 00481516", "Mobile 9876501234", "Ward 4B": a labelled identifier is never a lab result, even though it is a word followed by a number.
+    if (line.length < 4 || NOT_A_RESULT.test(line) || isIdentifyingLine(line)) continue;
     if (!/\d/.test(line)) continue;
 
     const found = findValue(line);

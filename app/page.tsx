@@ -3,12 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatRangeCompact } from '@/lib/flags';
 import { flagLabel, uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types';
-import { normalizeImage } from '@/lib/clientImage';
+import { cropImage, isImageFile, normalizeImage, type CropEdges } from '@/lib/clientImage';
 import { buildShareText, whatsappUrl } from '@/lib/share';
+import { AiSees } from './AiSees';
 import { DoctorSheet } from './DoctorSheet';
 import { FamilyHandout } from './FamilyHandout';
 import { ImageCitationViewer } from './ImageCitationViewer';
 import { PdfCitationViewer } from './PdfCitationViewer';
+import { PhotoCropDialog } from './PhotoCropDialog';
 
 const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', ml: 'Malayalam · മലയാളം', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी' };
 const VOICE_LANG: Record<Language, string> = { en: 'en-US', te: 'te-IN', hi: 'hi-IN', es: 'es-ES', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN' };
@@ -36,6 +38,7 @@ export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [sourceBox, setSourceBox] = useState<LabRow['source_box'] | null>(null);
   const [sourceQuote, setSourceQuote] = useState('');
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
   const listenToken = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -80,11 +83,29 @@ export default function Home() {
   const spokenLang = language !== 'en' && !translated ? VOICE_LANG.en : VOICE_LANG[language];
 
   // --- actions ---------------------------------------------------------------------------------
+  // A PDF is read straight away. A photo first goes through the crop step, so the header with the patient's name
+  // is cut off here in the browser and never uploaded.
   async function onUpload(file: File | undefined) {
     if (!file) return;
+    setError('');
+    if (!isImageFile(file)) { await analyze(file, file); return; }
+    setLoading(true);
+    try { setPendingPhoto(await normalizeImage(file)); }
+    finally { setLoading(false); if (fileInput.current) fileInput.current.value = ''; }
+  }
+
+  async function confirmCrop(edges: CropEdges) {
+    const photo = pendingPhoto;
+    setPendingPhoto(null);
+    if (!photo) return;
+    setLoading(true);
+    try { await analyze(await cropImage(photo, edges), photo); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not crop that photo.'); setLoading(false); }
+  }
+
+  async function analyze(upload: File, file: File) {
     setError(''); setLoading(true); setShowDoctor(false);
     try {
-      const upload = await normalizeImage(file);
       const form = new FormData(); form.append('file', upload);
       const res = await fetch('/api/analyze', { method: 'POST', body: form });
       const data = await res.json();
@@ -212,7 +233,7 @@ export default function Home() {
               </div>
               {loading && <div role="status"><p>Reading your report. This can take up to a minute…</p><div className="progress"><i /></div></div>}
               {error && <div className="error" role="alert">{error}</div>}
-              <p className="muted small">Nothing is stored. Your report text, with name, date of birth and ID lines removed, is sent to Meta&apos;s Muse AI to be explained.</p>
+              <p className="muted small">Nothing is stored. The AI never receives your report text: only test names, values and ranges are sent to Meta&apos;s Muse AI, never your name, date of birth or ID. For a photo you crop out the header first.</p>
             </section>
           </>
         )}
@@ -229,6 +250,7 @@ export default function Home() {
               <button className="big" onClick={() => setShowHandout(true)}>🔠 {ui.handoutBtn}</button>
               <a className="linkbtn big" href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer">💬 {ui.whatsappBtn}</a>
             </div>
+            {report.ai_input && <AiSees input={report.ai_input} />}
             {translationNotice && <p className="muted" role="status">{translationNotice}</p>}
             {!report.verification_passed && <div className="warn">{report.verification_note}</div>}
             {reviewCount > 0 && <div className="warn">{reviewCount} test(s) below are marked <strong>Needs review</strong>. Please check them against your original report.</div>}
@@ -278,6 +300,8 @@ export default function Home() {
           {imageFile && sourceBox && <ImageCitationViewer file={imageFile} box={sourceBox} quote={sourceQuote} onClose={() => setSourceBox(null)} />}
           </div>
         )}
+
+        {pendingPhoto && <PhotoCropDialog file={pendingPhoto} onConfirm={confirmCrop} onCancel={() => setPendingPhoto(null)} />}
 
         {report && showHandout && !showDoctor && (
           <FamilyHandout report={report} language={language} summary={display.summary} questions={display.questions} explain={display.explain} onBack={() => setShowHandout(false)} />

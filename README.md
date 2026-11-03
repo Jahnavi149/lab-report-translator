@@ -34,7 +34,7 @@ Muse Spark runs through the Meta Model API (OpenAI-compatible, `https://api.meta
 | Explanations | Rewrites each row's sentence naturally |
 | Summary | Writes the 3-line summary |
 | Doctor questions | Writes one question per flagged row |
-| Second-pass check | Independently confirms each extracted row against the redacted document text Can only **downgrade** confidence. |
+| Second-pass check | Independently confirms each extracted row against its own redacted result line. Can only **downgrade** confidence. |
 
 Muse writes the text; the code-written templates in `lib/flags.ts` only stand in for a single sentence that Muse got wrong or that failed validation.
 
@@ -51,7 +51,17 @@ Muse never decides a flag, value, unit or range. Every sentence it writes passes
 
 ### Privacy
 
-The app stores nothing: no database, no accounts, files are handled in memory. The report text (lines containing patient name, date of birth, IDs, phone, email etc. are removed first; see `redactForMuse`) or your photo is sent to Meta's Muse API to be processed. Photos cannot be redacted. See Meta's terms for what they retain.
+The app stores nothing: no database, no accounts, files are handled in memory. **No patient name, date of birth, ID, phone, email or address is sent to the AI.** That is enforced in three layers, so that one failing does not leak:
+
+1. **The AI only ever receives structured rows (`lib/privacy.ts`).** Every Muse function takes `MuseSafeRow[]` (test name, value, unit, printed range, flag) and nothing else. The type is branded, so a raw `LabRow`, a report string or a file name does not compile at any Muse call site, and `lib/privacy.typecheck.ts` makes the build fail if that ever stops being true. The report text itself is never sent. Even if redaction missed a name in the header, the header cannot reach the model because no Muse function accepts it.
+2. **Redaction backstop (`redactWithAudit` in `lib/safety.ts`).** The only free text that is sent is each result's own line, for the second-pass check. Those lines pass through a pure, tested redactor that drops lines with labelled identifiers (name, DOB, MRN/UHID/account/lab/visit numbers, phone, email, address, relatives, insurance, referring doctor, titled names such as "Mr. Rao") and masks emails, dates and phone/ID-style numbers inside the lines that stay. The parser uses the same list, so a line such as "MRN 00481516" is never read as a lab result. A test name that itself looks like an identifier is left out of every request. The audit (count and kinds, never the values) is shown in the app as "N identifiers were kept away from the AI".
+3. **Photos are the documented exception.** Pixels cannot be redacted by code, so a photo is sent to Muse as a picture so the results can be read from it. Before upload the user is asked to crop the photo to the results table; the trimmed part (the header with the name) is cut off in the browser and never leaves the device. The app says plainly that the photo is sent and that the user should check the crop covered their name.
+
+**Deliberately kept:** age and sex. Many reference ranges depend on them, and alone they do not identify a person. They are still not sent today (layer 1 sends no free text), and the redactor leaves them alone if they appear in a result line.
+
+**What the AI sees.** The results page has an expandable "What the AI sees" panel with the exact rows (and result lines) given to the AI for that report. Translation sends the app's own plain-English sentences back to the AI; those contain only test names, values and ranges.
+
+**Not covered:** a test name or result line that carries an identifier in a form the redactor does not recognise (for example a name printed inside a result line with no label). The redactor is conservative but it is pattern based, and is tested against the corpus in `scripts/evaluate.mjs`, not against every report in the world. See Meta's terms for what they retain.
 
 ## Run it
 
@@ -92,6 +102,7 @@ npm test      # also runs before every `npm run build`
 | Parser | 18 realistic line formats: `>`, `≤`, commas, `x10E3/uL`, `Vitamin D, 25-Hydroxy`, H/L markers, multi-tier ranges, qualified results like `<0.5` (refused, not misread), dates and headers skipped, duplicate names |
 | Verifier | Per-row, whole-token checks; tampered values and ranges are caught |
 | Real PDF end to end | `public/sample-report.pdf` → 8 correct rows, patient name/DOB never become rows, redaction removes identifiers |
+| Privacy | 30+ adversarial identifier lines (names, DOB in several formats, MRN, phone, email, address, SSN, Aadhaar, insurance, relatives, dates inside result lines) are put through the redactor and through the whole pipeline with a mocked API; every request body is inspected for leaks ("N identifier substrings tested, 0 leaked"); every request carries only allow-listed row fields; rows are byte-identical before and after; the user-facing audit contains no identifiers; the build fails if raw text becomes accepted by a Muse function |
 | AI-output safety | Faithful sentences accepted; diagnoses, diet/supplement advice, invented numbers, contradictions of the code's flag, urgency and over-long text rejected |
 | Localized interface, sharing | Every interface string exists and is translated for te/hi/es; the "does NOT mean" box is translated; share text adds no numbers beyond the summary and questions and keeps the information-only line; the WhatsApp link round-trips the exact text |
 | Muse pipeline (mocked API) | Good output used; adversarial output dropped; HTTP 500 and 400 handled; flags/values never change; hostile text stays inside `<data>` |
