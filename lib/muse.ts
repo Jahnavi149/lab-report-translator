@@ -1,6 +1,7 @@
 import { hasNumberToken } from './verify';
 import { explanationIsSafe, questionIsSafe, sanitizeTestName, summaryIsSafe, translationIsSafe } from './safety';
 import { priorityRows } from './flags';
+import { parseLabText } from './parse';
 import type { MuseCheckItem } from './privacy';
 import type { Language, MuseSafeRow } from './types';
 
@@ -195,8 +196,14 @@ export async function extractFromImageWithMuse(buffer: Buffer, mime: string): Pr
     const bound = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
     let low = bound(r.ref_low), high = bound(r.ref_high);
     if (low !== null && high !== null && low > high) { low = null; high = null; }
-    const unit = typeof r.unit === 'string' ? r.unit.replace(/[^\p{L}\p{N}/%µμ^*.-]/gu, '').slice(0, 20) : '';
     const source = typeof r.source_text === 'string' ? r.source_text.replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+    // Code decides the range. Live runs showed Muse quoting "(<200)" correctly but sometimes leaving both bounds null,
+    // which silently turned a High result into "Unknown". So the range is re-read from the quoted line by our own
+    // parser, and wins over the model's separate fields whenever that line parses to the same value. If the line is
+    // ambiguous (several tiers) the parser says so and the row stays "no single range" however Muse filled the fields.
+    const reread = parseLabText(source).find((p) => p.value === value);
+    if (reread) { low = reread.ref_low; high = reread.ref_high; }
+    const unit = typeof r.unit === 'string' ? r.unit.replace(/[^\p{L}\p{N}/%µμ^*.-]/gu, '').slice(0, 20) : '';
     // Self-consistency: the numbers Muse returned must appear in the line it says it read them from.
     const consistent = source.length > 0 && hasNumberToken(source, value) && (low === null || hasNumberToken(source, low)) && (high === null || hasNumberToken(source, high));
     rows.push({ test_name: name, value, unit, ref_low: low, ref_high: high, source_text: source || `${name} ${value} ${unit}`.trim(), consistent });

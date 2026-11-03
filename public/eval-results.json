@@ -1,6 +1,6 @@
 {
-  "passed": 276,
-  "total": 276,
+  "passed": 283,
+  "total": 283,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -49,8 +49,8 @@
     },
     {
       "name": "Muse pipeline against a mocked Meta API (no network)",
-      "passed": 35,
-      "total": 35
+      "passed": 42,
+      "total": 42
     },
     {
       "name": "Privacy: no PHI/PII reaches the AI (defense in depth)",
@@ -58,5 +58,5 @@
       "total": 34
     }
   ],
-  "generated_at": "2026-11-03T02:16:52.701Z"
+  "generated_at": "2026-11-03T19:21:49.415Z"
 }

@@ -384,8 +384,28 @@ const vis = await muse.extractFromImageWithMuse(Buffer.from([1, 2, 3]), 'image/p
 eq('vision: malformed rows dropped, 3 kept', vis.length, 3);
 check('vision: markup stripped from names', vis.every((r) => !/[<>]/.test(r.test_name)));
 check('vision: row whose numbers are not on its quoted line is marked inconsistent', vis.find((r) => r.test_name.startsWith('Sodium')).consistent === false && vis[0].consistent === true);
-check('vision: impossible range (low > high) is discarded, not trusted', vis.find((r) => r.test_name === 'Glucose').ref_low === null);
+check('vision: a range Muse got backwards (low > high) is replaced by the one our parser reads from the quoted line', vis.find((r) => r.test_name === 'Glucose').ref_low === 70 && vis.find((r) => r.test_name === 'Glucose').ref_high === 99);
 check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/png;base64,'));
+
+// A live run showed Muse quoting "(<200)" correctly but leaving both bounds null, turning a High result into "Unknown".
+// The range is now re-read from the quoted line by our own parser, so it no longer depends on Muse filling the fields.
+calls = mockMuse(() => ({ rows: [
+  { test_name: 'Total Cholesterol', value: 230, unit: 'mg/dL', ref_low: null, ref_high: null, source_text: 'Total Cholesterol 230 mg/dL (<200)' },
+  { test_name: 'HDL Cholesterol', value: 38, unit: 'mg/dL', ref_low: null, ref_high: null, source_text: 'HDL Cholesterol 38 mg/dL (>40)' },
+  { test_name: 'LDL Cholesterol', value: 142, unit: 'mg/dL', ref_low: null, ref_high: 100, source_text: 'LDL Cholesterol 142 mg/dL Optimal <100, Borderline 130-159' },
+  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: null, ref_high: null, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' },
+  { test_name: 'Ferritin', value: 22, unit: 'ng/mL', ref_low: null, ref_high: null, source_text: 'Ferritin 22 ng/mL' },
+  { test_name: 'Sodium', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'free text that does not parse' },
+] }));
+const one2 = await muse.extractFromImageWithMuse(Buffer.from([1, 2, 3]), 'image/png');
+const byName = Object.fromEntries(one2.map((r) => [r.test_name, r]));
+check('vision: "(<200)" with empty bounds from Muse is read as an upper bound of 200', byName['Total Cholesterol'].ref_low === null && byName['Total Cholesterol'].ref_high === 200);
+check('vision: "(>40)" with empty bounds from Muse is read as a lower bound of 40', byName['HDL Cholesterol'].ref_low === 40 && byName['HDL Cholesterol'].ref_high === null);
+check('vision: several printed tiers stay "no single range", even if Muse picked one of them', byName['LDL Cholesterol'].ref_low === null && byName['LDL Cholesterol'].ref_high === null);
+check('vision: a normal "low - high" range is read from the quoted line when Muse left it empty', byName['Hemoglobin'].ref_low === 12 && byName['Hemoglobin'].ref_high === 15.5);
+check('vision: no printed range stays empty', byName['Ferritin'].ref_low === null && byName['Ferritin'].ref_high === null);
+check('vision: if the quoted line does not parse, Muse\'s own bounds are kept (and the row stays low confidence)', byName['Sodium'].ref_low === 135 && byName['Sodium'].ref_high === 145 && byName['Sodium'].consistent === false);
+check('vision: the flags those ranges give are High and Low, not Unknown', flagFor(230, byName['Total Cholesterol'].ref_low, byName['Total Cholesterol'].ref_high) === 'High' && flagFor(38, byName['HDL Cholesterol'].ref_low, byName['HDL Cholesterol'].ref_high) === 'Low');
 globalThis.fetch = realFetch;
 delete process.env.META_MODEL_API_KEY;
 for (const placeholder of ['<META_API_KEY>', '  <META_API_KEY>  ', 'your_key_here', '']) {
@@ -614,6 +634,5 @@ console.log('='.repeat(60));
 console.log(`${passed}/${total} checks passed`);
 mkdirSync('public', { recursive: true });
 writeFileSync('public/eval-results.json', JSON.stringify({ passed, total, groups: groups.map(({ name, passed: p, total: t }) => ({ name, passed: p, total: t })), generated_at: new Date().toISOString() }, null, 2) + '\n');
-// The OCR worker is a long-lived thread in the server; end it here so this script can exit.
-await globalThis.__labOcrWorker?.then((w) => w.terminate()).catch(() => {});
-if (passed !== total) process.exit(1);
+// The OCR engine keeps native threads alive after the last check; exit explicitly so this script ends.
+process.exit(passed === total ? 0 : 1);

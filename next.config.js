@@ -3,9 +3,12 @@ const nextConfig = {
   // Lets a production build run beside `next dev` without sharing its cache: NEXT_DIST_DIR=.next-prod
   distDir: process.env.NEXT_DIST_DIR || '.next',
   experimental: {
-    serverComponentsExternalPackages: ['pdfjs-dist', 'tesseract.js'],
-    // Hosts that trace files (e.g. Vercel) must ship the OCR engine and its English data with the analyze route.
-    outputFileTracingIncludes: { '/api/analyze': ['./node_modules/@tesseract.js-data/eng/4.0.0_best_int/**', './node_modules/tesseract.js-core/**', './node_modules/tesseract.js/src/worker-script/**'] },
+    // The OCR engine (PaddleOCR on ONNX) is an ES module with native code: load it from node_modules, do not bundle it.
+    serverComponentsExternalPackages: ['pdfjs-dist', '@gutenye/ocr-node', '@gutenye/ocr-common', '@gutenye/ocr-models', 'onnxruntime-node', 'sharp'],
+    // Hosts that trace files (e.g. Vercel) must ship the OCR models and the Linux runtime with the analyze route,
+    // and can leave out the Windows and macOS runtimes (about 250 MB) that the same package carries.
+    outputFileTracingIncludes: { '/api/analyze': ['./node_modules/@gutenye/ocr-models/**', './node_modules/onnxruntime-node/bin/napi-v6/linux/**'] },
+    outputFileTracingExcludes: { '/api/analyze': ['./node_modules/onnxruntime-node/bin/napi-v6/win32/**', './node_modules/onnxruntime-node/bin/napi-v6/darwin/**'] },
   },
   webpack: (config) => {
     config.resolve.alias = { ...config.resolve.alias, canvas: false };
