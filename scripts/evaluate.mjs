@@ -273,6 +273,30 @@ for (const r of truthRows) {
 check(`real OCR on the sample photo: every highlight shown is on the right line (${correct}/${shown})`, shown > 0 && correct === shown);
 check(`real OCR on the sample photo: every one of the ${truthRows.length} rows gets a citation (${shown})`, shown === truthRows.length);
 
+// Patient-portal "cards": the name on the left, the result alone in a coloured box on the right (a slightly different
+// baseline, so OCR reports them as separate lines), and the printed range on the line below. Layout taken from real
+// portal screenshots; the numbers here are made up.
+const L = (text, y, x = 0.02, w = 0.5, h = 0.024) => ({ text, box: { x, y, width: w, height: h } });
+const card = (name, y, value, range) => [L(name, y), L(value, y + 0.008, 0.87, 0.1), L(`Reference Range: ${range}`, y + 0.032)];
+const portal = [L('IRON AND TOTAL IRON BINDING CAPACITY', 0.36, 0.09, 0.8), ...card('IRON, TOTAL', 0.441, '24 L', '40-190 mcg/dL'), ...card('IRON BINDING CAPACITY', 0.527, '400', '250-450 mcg/dL (calc)'), ...card('% SATURATION', 0.612, '6 L', '16-45 % (calc)')];
+const iron = ocr.matchRowToLine({ test_name: 'IRON, TOTAL', value: 24, ref_low: 40, ref_high: 190 }, portal);
+check('portal card: value in a side box and the range line below are both part of the highlight', iron && iron.y <= 0.441 && iron.y + iron.height >= 0.441 + 0.032 + 0.024 - 0.001 && iron.x + iron.width >= 0.97);
+const cap = ocr.matchRowToLine({ test_name: 'Iron Binding Capacity', value: 400, ref_low: 250, ref_high: 450 }, portal);
+check('portal card: a section title that repeats the test name does not steal the match', cap && Math.abs(cap.y - 0.527) < 0.002);
+check('portal card: the highlight is the card for this row only, not the next one', iron && iron.y + iron.height < 0.527);
+check('portal card: a value that is not in this row\'s band is not accepted', ocr.matchRowToLine({ test_name: 'IRON, TOTAL', value: 400, ref_low: null, ref_high: null }, portal) === null);
+const twoCols = [L('SODIUM', 0.3, 0.02, 0.2), L('POTASSIUM', 0.3, 0.5, 0.2), L('140', 0.303, 0.3, 0.08), L('4.1', 0.303, 0.8, 0.08)];
+check('portal card: two cards side by side, each value goes to the name on its left', (() => { const a = ocr.matchRowToLine({ test_name: 'SODIUM', value: 140, ref_low: null, ref_high: null }, twoCols), b = ocr.matchRowToLine({ test_name: 'POTASSIUM', value: 4.1, ref_low: null, ref_high: null }, twoCols); return a && b && a.x + a.width <= 0.4 + 0.001 && b.x >= 0.5 - 0.001; })());
+const leftOfName = [L('9.6', 0.303, 0.02, 0.08), L('CALCIUM', 0.3, 0.3, 0.2)];
+check('portal card: a value box to the LEFT of the name is not used', ocr.matchRowToLine({ test_name: 'CALCIUM', value: 9.6, ref_low: null, ref_high: null }, leftOfName) === null);
+const blocked = [L('CALCIUM', 0.3, 0.02, 0.2), L('MAGNESIUM', 0.3, 0.4, 0.2), L('9.6', 0.303, 0.87, 0.08)];
+check('portal card: another name between the name and the value box blocks the match', ocr.matchRowToLine({ test_name: 'CALCIUM', value: 9.6, ref_low: null, ref_high: null }, blocked) === null);
+const neighbours = [L('CALCIUM', 0.3), L('9.6', 0.303, 0.87, 0.08), L('MAGNESIUM 2.0 mg/dL', 0.3, 0.55, 0.3)];
+check('portal card: a long text beside the name (another test) is never treated as the value box', ocr.matchRowToLine({ test_name: 'MAGNESIUM', value: 9.6, ref_low: null, ref_high: null }, neighbours) === null);
+const dupCards = [...card('GLUCOSE', 0.2, '91', '65-99 mg/dL'), ...card('GLUCOSE', 0.5, '91', '65-99 mg/dL')];
+check('portal card: the same test twice with the same value is ambiguous, so no highlight', ocr.matchRowToLine({ test_name: 'GLUCOSE', value: 91, ref_low: 65, ref_high: 99 }, dupCards) === null);
+check('spaces dropped by the OCR engine do not break value matching ("Hemoglobin11.2g/dL12.0-15.5")', ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 11.2, ref_low: 12, ref_high: 15.5 }, [L('Hemoglobin11.2g/dL12.0-15.5', 0.4, 0.05, 0.6)]) !== null && ocr.hasNumberLoose('Hemoglobin11.2g/dL', 11.2) && !ocr.hasNumberLoose('Hemoglobin111.2g/dL', 11.2) && !ocr.hasNumberLoose('x11.25', 11.2));
+
 // ------------------------------------------------------------------------------------------------
 group('Muse pipeline against a mocked Meta API (no network)');
 const muse = load('muse');
@@ -384,8 +408,28 @@ const vis = await muse.extractFromImageWithMuse(Buffer.from([1, 2, 3]), 'image/p
 eq('vision: malformed rows dropped, 3 kept', vis.length, 3);
 check('vision: markup stripped from names', vis.every((r) => !/[<>]/.test(r.test_name)));
 check('vision: row whose numbers are not on its quoted line is marked inconsistent', vis.find((r) => r.test_name.startsWith('Sodium')).consistent === false && vis[0].consistent === true);
-check('vision: impossible range (low > high) is discarded, not trusted', vis.find((r) => r.test_name === 'Glucose').ref_low === null);
+check('vision: a range Muse got backwards (low > high) is replaced by the one our parser reads from the quoted line', vis.find((r) => r.test_name === 'Glucose').ref_low === 70 && vis.find((r) => r.test_name === 'Glucose').ref_high === 99);
 check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/png;base64,'));
+
+// A live run showed Muse quoting "(<200)" correctly but leaving both bounds null, turning a High result into "Unknown".
+// The range is now re-read from the quoted line by our own parser, so it no longer depends on Muse filling the fields.
+calls = mockMuse(() => ({ rows: [
+  { test_name: 'Total Cholesterol', value: 230, unit: 'mg/dL', ref_low: null, ref_high: null, source_text: 'Total Cholesterol 230 mg/dL (<200)' },
+  { test_name: 'HDL Cholesterol', value: 38, unit: 'mg/dL', ref_low: null, ref_high: null, source_text: 'HDL Cholesterol 38 mg/dL (>40)' },
+  { test_name: 'LDL Cholesterol', value: 142, unit: 'mg/dL', ref_low: null, ref_high: 100, source_text: 'LDL Cholesterol 142 mg/dL Optimal <100, Borderline 130-159' },
+  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: null, ref_high: null, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' },
+  { test_name: 'Ferritin', value: 22, unit: 'ng/mL', ref_low: null, ref_high: null, source_text: 'Ferritin 22 ng/mL' },
+  { test_name: 'Sodium', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'free text that does not parse' },
+] }));
+const one2 = await muse.extractFromImageWithMuse(Buffer.from([1, 2, 3]), 'image/png');
+const byName = Object.fromEntries(one2.map((r) => [r.test_name, r]));
+check('vision: "(<200)" with empty bounds from Muse is read as an upper bound of 200', byName['Total Cholesterol'].ref_low === null && byName['Total Cholesterol'].ref_high === 200);
+check('vision: "(>40)" with empty bounds from Muse is read as a lower bound of 40', byName['HDL Cholesterol'].ref_low === 40 && byName['HDL Cholesterol'].ref_high === null);
+check('vision: several printed tiers stay "no single range", even if Muse picked one of them', byName['LDL Cholesterol'].ref_low === null && byName['LDL Cholesterol'].ref_high === null);
+check('vision: a normal "low - high" range is read from the quoted line when Muse left it empty', byName['Hemoglobin'].ref_low === 12 && byName['Hemoglobin'].ref_high === 15.5);
+check('vision: no printed range stays empty', byName['Ferritin'].ref_low === null && byName['Ferritin'].ref_high === null);
+check('vision: if the quoted line does not parse, Muse\'s own bounds are kept (and the row stays low confidence)', byName['Sodium'].ref_low === 135 && byName['Sodium'].ref_high === 145 && byName['Sodium'].consistent === false);
+check('vision: the flags those ranges give are High and Low, not Unknown', flagFor(230, byName['Total Cholesterol'].ref_low, byName['Total Cholesterol'].ref_high) === 'High' && flagFor(38, byName['HDL Cholesterol'].ref_low, byName['HDL Cholesterol'].ref_high) === 'Low');
 globalThis.fetch = realFetch;
 delete process.env.META_MODEL_API_KEY;
 for (const placeholder of ['<META_API_KEY>', '  <META_API_KEY>  ', 'your_key_here', '']) {
@@ -614,6 +658,5 @@ console.log('='.repeat(60));
 console.log(`${passed}/${total} checks passed`);
 mkdirSync('public', { recursive: true });
 writeFileSync('public/eval-results.json', JSON.stringify({ passed, total, groups: groups.map(({ name, passed: p, total: t }) => ({ name, passed: p, total: t })), generated_at: new Date().toISOString() }, null, 2) + '\n');
-// The OCR worker is a long-lived thread in the server; end it here so this script can exit.
-await globalThis.__labOcrWorker?.then((w) => w.terminate()).catch(() => {});
-if (passed !== total) process.exit(1);
+// The OCR engine keeps native threads alive after the last check; exit explicitly so this script ends.
+process.exit(passed === total ? 0 : 1);

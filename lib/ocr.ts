@@ -1,10 +1,7 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { hasNumberToken } from './verify';
 import type { ImageSourceBox } from './types';
 
-// Where is a result on a photo? Not the language model's guess: OCR finds every printed word and its exact
-// pixel box, and plain code matches each row to one line. A row is highlighted only when exactly one line
+// Where is a result on a photo? Not the language model's guess: a local OCR engine (PaddleOCR, run through ONNX
+// inside this server) finds every printed text box and its exact pixel position, and plain code matches each row to one line. A row is highlighted only when exactly one line
 // carries both its test name and its value; otherwise it gets no highlight, never a wrong one.
 
 export interface OcrWord { text: string; x0: number; y0: number; x1: number; y1: number }
@@ -93,6 +90,16 @@ export function groupWordsIntoLines(words: OcrWord[], width: number, height: num
 
 // --- matching a row to one line ------------------------------------------------------------------
 
+/**
+ * True if the number appears in the text as a whole number: not glued to other digits, a decimal point or a thousands
+ * comma. Works on text with or without spaces, because PaddleOCR often joins a table row into one run
+ * ("Hemoglobin11.2g/dL12.0-15.5"), where a word-boundary check would wrongly fail.
+ */
+export function hasNumberLoose(text: string, n: number): boolean {
+  const forms = new Set([String(n), n.toFixed(1), n.toFixed(2)].filter((f) => Number(f) === n));
+  return [...forms].some((f) => new RegExp(`(?<![\\d.,])${f.replace('.', '\\.')}(?!\\d|[.,]\\d)`).test(text));
+}
+
 const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /** Smallest edit distance between `needle` and any part of `hay` (Sellers). */
@@ -112,57 +119,90 @@ function bestSubstringDistance(hay: string, needle: string): number {
 }
 
 const carriesBounds = (row: RowKey, text: string) =>
-  (row.ref_low === null || hasNumberToken(text, row.ref_low)) && (row.ref_high === null || hasNumberToken(text, row.ref_high));
+  (row.ref_low === null || hasNumberLoose(text, row.ref_low)) && (row.ref_high === null || hasNumberLoose(text, row.ref_high));
+
+const centreY = (l: OcrLine) => l.box.y + l.box.height / 2;
+const unionBox = (ls: OcrLine[]): ImageSourceBox => {
+  const x0 = Math.min(...ls.map((l) => l.box.x)), y0 = Math.min(...ls.map((l) => l.box.y));
+  const x1 = Math.max(...ls.map((l) => l.box.x + l.box.width)), y1 = Math.max(...ls.map((l) => l.box.y + l.box.height));
+  const r = (n: number) => Math.round(n * 10000) / 10000;
+  return { x: r(x0), y: r(y0), width: r(x1 - x0), height: r(y1 - y0) };
+};
+/** A box that holds only a result: the number, maybe a flag letter or a short unit ("24 L", "5.3", "4.53 mg/dL"). Never a name. */
+const isValueOnly = (l: OcrLine, value: number) => hasNumberLoose(l.text, value) && l.text.replace(/[^A-Za-z]/g, '').length <= 6;
 
 /**
- * The box of the single line that shows this row, or null. A line qualifies when it holds the test name
- * (exactly, or within a typo or two) and the row's value as a whole number token. If exactly one line
- * qualifies it is used; if several do, the printed range bounds may break the tie; otherwise: no answer.
+ * The box that shows this row, or null. First the test name must identify exactly one line (exactly, or within a
+ * typo or two). Then the row's value must be confirmed by layout, in one of two ways:
+ *   - on the same line as the name ("Hemoglobin 11.2 g/dL 12.0 - 15.5"), or
+ *   - alone in a box in the same horizontal band, to the side (patient-portal cards: name on the left, "24 L" on the right).
+ * If the printed range sits on the line just below (a "Reference Range: 40-190" line) it is included in the highlight.
+ * If more than one line qualifies, the printed range bounds may break the tie; otherwise: no answer. A missing
+ * highlight is always better than a wrong one.
  */
 export function matchRowToLine(row: RowKey, lines: OcrLine[]): ImageSourceBox | null {
   const name = alnum(row.test_name.replace(/\s*\(\d+\)$/, ''));
   if (name.length < 2) return null;
-  const withValue = lines.filter((l) => hasNumberToken(l.text.replace(/[–—−]/g, '-'), row.value));
   const tolerance = name.length >= 12 ? 2 : name.length >= 6 ? 1 : 0;
-  const pick = (cands: OcrLine[]): ImageSourceBox | null => {
-    if (cands.length === 1) return (cands[0] as OcrLine).box;
-    if (cands.length > 1) {
-      const tied = cands.filter((l) => carriesBounds(row, l.text.replace(/[–—−]/g, '-')));
-      if (tied.length === 1) return (tied[0] as OcrLine).box;
-    }
-    return null;
-  };
-  const exact = withValue.filter((l) => alnum(l.text).includes(name));
-  if (exact.length > 0) return pick(exact);
-  return pick(withValue.filter((l) => bestSubstringDistance(alnum(l.text), name) <= tolerance));
+  const exact = lines.filter((l) => alnum(l.text).includes(name));
+  const named = exact.length > 0 ? exact : lines.filter((l) => bestSubstringDistance(alnum(l.text), name) <= tolerance);
+
+  const confirmed: { line: OcrLine; box: ImageSourceBox; text: string }[] = [];
+  for (const c of named) {
+    const norm = (t: string) => t.replace(/[–—−]/g, '-');
+    const below = lines
+      .filter((l) => l !== c && l.box.y >= c.box.y + c.box.height * 0.5 && centreY(l) - centreY(c) <= c.box.height * 2.4)
+      .sort((x, y) => x.box.y - y.box.y)
+      .find((l) => /^ref/i.test(l.text.trim()) || [row.ref_low, row.ref_high].some((v) => v !== null && hasNumberLoose(norm(l.text), v)));
+    const extra = below && !alnum(below.text).includes(name) ? [below] : [];
+    if (hasNumberLoose(norm(c.text), row.value)) { confirmed.push({ line: c, box: unionBox([c, ...extra]), text: norm(`${c.text} ${extra[0]?.text ?? ''}`) }); continue; }
+    // A side box counts only if (a) the name line has no result of its own (a number that is not part of the test
+    // name), (b) the box starts to the right of the name, and (c) no other text sits between them in that band.
+    const own = (c.text.match(/\d+(?:\.\d+)?/g) ?? []).filter((n) => !row.test_name.includes(n));
+    const inBand = (l: OcrLine) => l !== c && Math.abs(centreY(l) - centreY(c)) <= 0.75 * Math.max(l.box.height, c.box.height);
+    const side = own.length > 0 ? [] : lines.filter((l) => inBand(l) && isValueOnly(l, row.value) && l.box.x > c.box.x && !lines.some((o) => inBand(o) && o !== l && !isValueOnly(o, row.value) && o.box.x > c.box.x && o.box.x < l.box.x));
+    if (side.length === 1) confirmed.push({ line: c, box: unionBox([c, side[0] as OcrLine, ...extra]), text: norm(`${c.text} ${side[0]?.text} ${extra[0]?.text ?? ''}`) });
+  }
+  if (confirmed.length === 1) return (confirmed[0] as (typeof confirmed)[number]).box;
+  if (confirmed.length > 1) {
+    const tied = confirmed.filter((m) => carriesBounds(row, m.text));
+    if (tied.length === 1) return (tied[0] as (typeof tied)[number]).box;
+  }
+  return null;
 }
 
-// --- OCR itself (Tesseract, running inside this server; the photo goes nowhere else) -------------
+// --- OCR itself (PaddleOCR through ONNX, running inside this server; the photo goes nowhere else) ----------
 
-type Worker = { recognize: (img: Buffer, opts?: object, out?: object) => Promise<{ data: { blocks?: { paragraphs: { lines: { words: { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } }[] }[] }[] }[] } }>; terminate: () => Promise<unknown>; setParameters: (p: object) => Promise<unknown> };
-const g = globalThis as { __labOcrWorker?: Promise<Worker>; __labOcrChain?: Promise<unknown> };
+type Engine = { detect: (image: { data: Buffer; width: number; height: number }) => Promise<{ texts: { text: string; mean?: number; box: number[][] }[] }> };
+const g = globalThis as { __labOcrEngine?: Promise<Engine>; __labOcrChain?: Promise<unknown> };
 const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS) || 30000;
+/** Text the engine is less sure of than this is not used to place a highlight. */
+const MIN_CONFIDENCE = 0.5;
 
-const langPath = () => join(process.cwd(), 'node_modules', '@tesseract.js-data', 'eng', '4.0.0_best_int');
+// The engine is an ES module and ships native code; load it with a real dynamic import so neither the bundler nor
+// the test transpiler rewrites it.
+const dynamicImport = new Function('s', 'return import(s)') as (s: string) => Promise<{ default: { create: (o?: object) => Promise<Engine> } }>;
 
-function worker(): Promise<Worker> {
-  g.__labOcrWorker ??= (async () => {
-    // A missing language file makes the engine throw from inside its thread, which would take the whole server down. Check first.
-    if (!existsSync(join(langPath(), 'eng.traineddata.gz'))) throw new Error('OCR language data not found');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createWorker, PSM } = require('tesseract.js');
-    const w = await createWorker('eng', 1, { langPath: langPath(), cacheMethod: 'none' }) as Worker;
-    // Sparse text keeps table cells that sit far apart from being merged or dropped.
-    await w.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-    return w;
-  })();
-  return g.__labOcrWorker;
+function engine(): Promise<Engine> {
+  g.__labOcrEngine ??= (async () => (await dynamicImport('@gutenye/ocr-node')).default.create())();
+  return g.__labOcrEngine;
+}
+
+/** Decodes the photo to raw pixels in memory. Nothing is written to disk. Transparent areas become white (a transparent PNG would otherwise be black text on black). */
+async function decode(buffer: Buffer): Promise<{ data: Buffer; width: number; height: number }> {
+  type Pipeline = { flatten: (o: object) => Pipeline; ensureAlpha: (a: number) => Pipeline; raw: () => Pipeline; toBuffer: (o: object) => Promise<{ data: Buffer; info: { width: number; height: number } }> };
+  const sharp = (await dynamicImport('sharp') as unknown as { default: (b: Buffer) => Pipeline }).default;
+  const { data, info } = await sharp(buffer).flatten({ background: '#ffffff' }).ensureAlpha(1).raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height };
 }
 
 async function recognizeWords(buffer: Buffer): Promise<OcrWord[]> {
-  const w = await worker();
-  const { data } = await w.recognize(buffer, {}, { blocks: true });
-  return (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words.map((x) => ({ text: x.text, x0: x.bbox.x0, y0: x.bbox.y0, x1: x.bbox.x1, y1: x.bbox.y1 })))));
+  const [ocr, image] = await Promise.all([engine(), decode(buffer)]);
+  const { texts } = await ocr.detect(image);
+  return texts.filter((t) => t.text.trim() && (t.mean ?? 1) >= MIN_CONFIDENCE).map((t) => {
+    const xs = t.box.map((pt) => pt[0] as number), ys = t.box.map((pt) => pt[1] as number);
+    return { text: t.text.trim(), x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+  });
 }
 
 /**
@@ -183,9 +223,7 @@ export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
       return groupWordsIntoLines(words, info.width, info.height);
     } catch (e) {
       console.error('OCR failed:', e instanceof Error ? e.message : e);
-      // A stuck or broken worker must not poison later uploads.
-      const stale = g.__labOcrWorker; g.__labOcrWorker = undefined;
-      void stale?.then((w) => w.terminate()).catch(() => {});
+      g.__labOcrEngine = undefined; // a broken engine must not poison later uploads
       return [] as OcrLine[];
     } finally { if (timer) clearTimeout(timer); }
   });
