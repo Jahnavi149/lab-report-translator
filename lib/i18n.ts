@@ -32,7 +32,7 @@ export interface Ui {
 }
 
 const TE: Pack = {
-  flag: { High: 'ఎక్కువ', Low: 'తక్కువ', Normal: 'సాధారణ పరిధి', Unknown: 'పరిధి లేదు' },
+  flag: { High: 'ఎక్కువ', Low: 'తక్కువ', Normal: 'సాధారణ పరిధి', Unknown: "తెలియదు" },
   ui: {
     testCol: 'పరీక్ష', valueCol: 'మీ విలువ', rangeCol: 'నివేదికలోని పరిధి', flagCol: 'స్థితి', meaningCol: 'అర్థం',
     summaryHeading: 'సారాంశం — ముఖ్యమైనవి', resultsHeading: 'మీ ఫలితాలు, సులభ భాషలో',
@@ -42,7 +42,7 @@ const TE: Pack = {
     checklist: 'చెక్‌లిస్ట్', bringSheet: 'ఈ షీట్ తీసుకురండి', bringMeds: 'మీ మందుల జాబితా తీసుకురండి', bringPrevious: 'మునుపటి రిపోర్టులు తీసుకురండి', doctorAnswers: 'డాక్టర్ సమాధానాలు',
     notMeanTitle: "దీని అర్థం ఇది కాదు:", notMeanBody: "ఒక్క ఎక్కువ లేదా తక్కువ విలువ రోగ నిర్ధారణ కాదు. దానిని మీ డాక్టర్ మాత్రమే సరైన సందర్భంలో అర్థం చేసుకోగలరు. మీకు అనారోగ్యంగా అనిపిస్తే వెంటనే వైద్య సహాయం తీసుకోండి. ఈ సాధనంతో అత్యవసరతను అంచనా వేయడం సాధ్యం కాదు.",
     infoOnly: 'సమాచారం కోసం మాత్రమే, రోగ నిర్ధారణ కాదు',
-    privacyNote: "ఏదీ నిల్వ చేయబడదు. డిజిటల్ PDFలో గుర్తింపు వివరాలను తొలగించిన తర్వాత దాని ఎంచుకోగల టెక్స్ట్‌ను ఫలితాలు చదవడానికి Meta యొక్క Muse AIకి పంపుతాము. ఫోటోను ముందుగా ఈ సర్వర్‌లో శుభ్రం చేస్తాము. లేబుల్ లేని పేర్లను స్వయంచాలకంగా గుర్తించలేము; అప్‌లోడ్ చేసే ముందు హెడర్‌ను కత్తిరించండి. పంపినది ఏమిటో మీరు చూడవచ్చు.",
+    privacyNote: "ఏదీ నిల్వ చేయబడదు. డిజిటల్ PDFలో గుర్తింపు వివరాలను తొలగించిన తర్వాత దాని ఎంచుకోగల టెక్స్ట్‌ను ఫలితాలు చదవడానికి Meta యొక్క Muse AIకి పంపుతాము. ఫోటోను ముందుగా ఈ సర్వర్‌లో శుభ్రం చేస్తాము. లేబుల్ లేని పేర్లను స్వయంచాలకంగా గుర్తించలేము; అప్‌లోడ్ చేసే ముందు హెడర్‌ను కత్తిరించండి. AIకి ఖచ్చితంగా ఏమి అందిందో మీరు చూడవచ్చు.",
     footerNote: 'ఈ యాప్ ల్యాబ్ రిపోర్ట్‌ను వివరిస్తుంది. ఇది రోగ నిర్ధారణ చేయదు, చికిత్స చేయదు, వైద్య సలహాకు ప్రత్యామ్నాయం కాదు. మీ ఫలితాల గురించి ఎల్లప్పుడూ మీ డాక్టర్‌ను అడగండి.',
     languageLabel: 'భాష', largeText: 'A+ పెద్ద అక్షరాలు', normalText: 'సాధారణ అక్షరాలు', highContrast: 'ఎక్కువ కాంట్రాస్ట్', normalContrast: 'సాధారణ కాంట్రాస్ట్',
     heroTitleA: 'మీ ల్యాబ్ రిపోర్ట్,', heroTitleB: 'మీ కుటుంబ భాషలో.',
@@ -70,7 +70,7 @@ const TE: Pack = {
 };
 
 const HI: Pack = {
-  flag: { High: 'अधिक', Low: 'कम', Normal: 'सीमा में', Unknown: 'सीमा नहीं' },
+  flag: { High: 'अधिक', Low: 'कम', Normal: 'सीमा में', Unknown: "अज्ञात" },
   ui: {
     testCol: 'जाँच', valueCol: 'आपका मान', rangeCol: 'रिपोर्ट की सीमा', flagCol: 'स्थिति', meaningCol: 'इसका मतलब',
     summaryHeading: 'सारांश — सबसे ज़रूरी बातें', resultsHeading: 'आपके परिणाम, आसान भाषा में',
@@ -108,7 +108,7 @@ const HI: Pack = {
 };
 
 const ES: Pack = {
-  flag: { High: 'Alto', Low: 'Bajo', Normal: 'En rango', Unknown: 'Sin rango' },
+  flag: { High: 'Alto', Low: 'Bajo', Normal: 'En rango', Unknown: "Desconocido" },
   ui: {
     testCol: 'Prueba', valueCol: 'Su valor', rangeCol: 'Rango del informe', flagCol: 'Estado', meaningCol: 'Qué dice',
     summaryHeading: 'Resumen: lo más importante', resultsHeading: 'Sus resultados, en lenguaje sencillo',
@@ -146,7 +146,7 @@ const ES: Pack = {
 };
 
 const TA: Pack = {
-  flag: { High: 'அதிகம்', Low: 'குறைவு', Normal: 'வரம்பிற்குள்', Unknown: 'வரம்பு இல்லை' },
+  flag: { High: 'அதிகம்', Low: 'குறைவு', Normal: 'வரம்பிற்குள்', Unknown: "தெரியவில்லை" },
   ui: {
     testCol: 'பரிசோதனை',
     valueCol: 'உங்கள் மதிப்பு',
@@ -210,7 +210,7 @@ const TA: Pack = {
 };
 
 const KN: Pack = {
-  flag: { High: 'ಹೆಚ್ಚು', Low: 'ಕಡಿಮೆ', Normal: 'ಮಿತಿಯೊಳಗೆ', Unknown: 'ಮಿತಿ ಇಲ್ಲ' },
+  flag: { High: 'ಹೆಚ್ಚು', Low: 'ಕಡಿಮೆ', Normal: 'ಮಿತಿಯೊಳಗೆ', Unknown: "ತಿಳಿದಿಲ್ಲ" },
   ui: {
     testCol: 'ಪರೀಕ್ಷೆ',
     valueCol: 'ನಿಮ್ಮ ಮೌಲ್ಯ',
@@ -274,7 +274,7 @@ const KN: Pack = {
 };
 
 const BN: Pack = {
-  flag: { High: 'বেশি', Low: 'কম', Normal: 'সীমার মধ্যে', Unknown: 'সীমা নেই' },
+  flag: { High: 'বেশি', Low: 'কম', Normal: 'সীমার মধ্যে', Unknown: "অজানা" },
   ui: {
     testCol: 'পরীক্ষা',
     valueCol: 'আপনার মান',
@@ -338,7 +338,7 @@ const BN: Pack = {
 };
 
 const MR: Pack = {
-  flag: { High: 'जास्त', Low: 'कमी', Normal: 'मर्यादेत', Unknown: 'मर्यादा नाही' },
+  flag: { High: 'जास्त', Low: 'कमी', Normal: 'मर्यादेत', Unknown: "अज्ञात" },
   ui: {
     testCol: 'चाचणी',
     valueCol: 'तुमचे मूल्य',
@@ -402,7 +402,7 @@ const MR: Pack = {
 };
 
 const TL: Pack = {
-  flag: { High: 'Mataas', Low: 'Mababa', Normal: 'Nasa saklaw', Unknown: 'Walang saklaw' },
+  flag: { High: 'Mataas', Low: 'Mababa', Normal: 'Nasa saklaw', Unknown: "Hindi alam" },
   ui: {
     testCol: 'Pagsusuri', valueCol: 'Iyong halaga', rangeCol: 'Saklaw sa ulat', flagCol: 'Katayuan', meaningCol: 'Ibig sabihin',
     summaryHeading: 'Buod — ang pinakamahalaga', resultsHeading: 'Ang iyong mga resulta, sa simpleng salita',
@@ -440,7 +440,7 @@ const TL: Pack = {
 };
 
 const MS: Pack = {
-  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam julat', Unknown: 'Tiada julat' },
+  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam julat', Unknown: "Tidak diketahui" },
   ui: {
     testCol: 'Ujian', valueCol: 'Nilai anda', rangeCol: 'Julat dalam laporan', flagCol: 'Status', meaningCol: 'Maksudnya',
     summaryHeading: 'Ringkasan — yang paling penting', resultsHeading: 'Keputusan anda, dalam bahasa mudah',
@@ -478,7 +478,7 @@ const MS: Pack = {
 };
 
 const AR: Pack = {
-  flag: { High: 'مرتفع', Low: 'منخفض', Normal: 'ضمن النطاق', Unknown: 'لا يوجد نطاق' },
+  flag: { High: 'مرتفع', Low: 'منخفض', Normal: 'ضمن النطاق', Unknown: "غير معروف" },
   ui: {
     testCol: 'الفحص', valueCol: 'قيمتك', rangeCol: 'النطاق في التقرير', flagCol: 'الحالة', meaningCol: 'ماذا يعني',
     summaryHeading: 'الملخص — الأهم', resultsHeading: 'نتائجك بلغة بسيطة',
@@ -516,7 +516,7 @@ const AR: Pack = {
 };
 
 const FR: Pack = {
-  flag: { High: 'Élevé', Low: 'Bas', Normal: 'Dans la plage', Unknown: 'Pas de plage' },
+  flag: { High: 'Élevé', Low: 'Bas', Normal: 'Dans la plage', Unknown: "Inconnu" },
   ui: {
     testCol: 'Analyse', valueCol: 'Votre valeur', rangeCol: 'Plage du rapport', flagCol: 'Statut', meaningCol: 'Ce que cela dit',
     summaryHeading: 'Résumé : l’essentiel', resultsHeading: 'Vos résultats, en langage simple',
@@ -554,7 +554,7 @@ const FR: Pack = {
 };
 
 const DE: Pack = {
-  flag: { High: 'Hoch', Low: 'Niedrig', Normal: 'Im Bereich', Unknown: 'Kein Bereich' },
+  flag: { High: 'Hoch', Low: 'Niedrig', Normal: 'Im Bereich', Unknown: "Unbekannt" },
   ui: {
     testCol: 'Test', valueCol: 'Ihr Wert', rangeCol: 'Bereich im Bericht', flagCol: 'Status', meaningCol: 'Bedeutung',
     summaryHeading: 'Zusammenfassung: das Wichtigste', resultsHeading: 'Ihre Ergebnisse in einfacher Sprache',
@@ -592,7 +592,7 @@ const DE: Pack = {
 };
 
 const PT: Pack = {
-  flag: { High: 'Alto', Low: 'Baixo', Normal: 'Dentro da faixa', Unknown: 'Sem faixa' },
+  flag: { High: 'Alto', Low: 'Baixo', Normal: 'Dentro da faixa', Unknown: "Desconhecido" },
   ui: {
     testCol: 'Exame', valueCol: 'Seu valor', rangeCol: 'Faixa no relatório', flagCol: 'Situação', meaningCol: 'O que significa',
     summaryHeading: 'Resumo: o mais importante', resultsHeading: 'Seus resultados, em linguagem simples',
@@ -630,7 +630,7 @@ const PT: Pack = {
 };
 
 const ID: Pack = {
-  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam rentang', Unknown: 'Tanpa rentang' },
+  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam rentang', Unknown: "Tidak diketahui" },
   ui: {
     testCol: 'Pemeriksaan', valueCol: 'Nilai Anda', rangeCol: 'Rentang di laporan', flagCol: 'Status', meaningCol: 'Artinya',
     summaryHeading: 'Ringkasan: yang paling penting', resultsHeading: 'Hasil Anda, dalam bahasa sederhana',
