@@ -1,7 +1,7 @@
 import { applyFlags, plainEnglishFor, questionsFor, summaryFor } from './flags';
 import type { LabReport, LabRow } from './types';
 
-type RawRow = Omit<LabRow, 'flag' | 'plain_english' | 'flag_source' | 'confidence'> & { confidence?: LabRow['confidence'] };
+type RawRow = Omit<LabRow, 'value' | 'flag' | 'plain_english' | 'flag_source' | 'confidence'> & { value: number; confidence?: LabRow['confidence'] };
 
 function buildReport(id: string, title: string, raw: RawRow[], sourceNote: string): LabReport {
   const rows: LabRow[] = applyFlags(raw).map((r) => {

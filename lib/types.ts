@@ -1,4 +1,5 @@
 export type Flag = 'Normal' | 'High' | 'Low' | 'Unknown';
+export type ReportedVerdict = Exclude<Flag, 'Unknown'>;
 export type Confidence = 'high' | 'low';
 export type Language = 'en' | 'te' | 'hi' | 'es' | 'ta' | 'kn' | 'bn' | 'mr' | 'tl' | 'ms' | 'ar' | 'fr' | 'de' | 'pt' | 'id';
 export type FlagSource = 'range' | 'report_marker' | 'none';
@@ -21,7 +22,8 @@ export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 
 
 export interface LabRow {
   test_name: string;
-  value: number;
+  /** Some patient portals show only a verdict (for example HIGH) and omit the numeric result. */
+  value: number | null;
   unit: string;
   ref_low: number | null;
   ref_high: number | null;

@@ -236,7 +236,7 @@ export function looksIdentifying(text: string): boolean {
 // A result line is: test name, value, unit, a printed range, maybe an H/L flag or a word like "Optimal". If a line holds
 // any other word, it could be a name, so the line is not sent. This is what catches an unlabeled name in a result line.
 const RESULT_WORDS = new Set((
-  'high low normal abnormal critical final pending flag flags ref range reference result results optimal borderline desirable near above below very elevated ' +
+  'high low normal abnormal critical final pending expected within flag flags ref range reference result results optimal borderline desirable near above below very elevated ' +
   'deficient sufficient insufficient adequate acceptable target goal intermediate moderate mild severe average good fair optimum limit cutoff cut off ' +
   'male female men women adult adults child children infant newborn fasting random positive negative detected reactive nonreactive non ' +
   'to and or of the for in at less more than equal greater lower upper up under over per ' +

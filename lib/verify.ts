@@ -1,4 +1,5 @@
 import type { LabRow } from './types';
+import { verdictAppears } from './flags';
 
 // What this check does, honestly: for every extracted row it confirms that the value, the unit and each
 // printed range bound appear as WHOLE TOKENS on that row's own source line, and that the line really is
@@ -25,7 +26,9 @@ export function hasNumberToken(text: string, n: number): boolean {
 function verifyRow(row: LabRow, normalizedSource: string): string | null {
   const line = row.source_text;
   if (!normalizedSource.includes(line)) return 'its line was not found in the document text';
-  if (!hasNumberToken(line, row.value)) return 'its value was not found on its line';
+  if (row.value !== null && !hasNumberToken(line, row.value)) return 'its value was not found on its line';
+  if (row.value === null && row.flag_source !== 'report_marker') return 'it has no numeric value or report verdict to verify';
+  if (row.value === null && row.flag !== 'Unknown' && !verdictAppears(line, row.flag)) return `its ${row.flag} verdict was not found on its line`;
   if (row.unit && !line.toLowerCase().includes(row.unit.toLowerCase())) return 'its unit was not found on its line';
   if (row.ref_low !== null && !hasNumberToken(line, row.ref_low)) return 'its lower range bound was not found on its line';
   if (row.ref_high !== null && !hasNumberToken(line, row.ref_high)) return 'its upper range bound was not found on its line';

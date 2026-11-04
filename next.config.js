@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Lets a production build run beside `next dev` without sharing its cache: NEXT_DIST_DIR=.next-prod
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
+
+const nextConfig = (phase) => ({
+  // Dev and production builds must not share generated chunks: a build can otherwise break a running dev server.
+  distDir: process.env.NEXT_DIST_DIR || (phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next'),
   experimental: {
     // The local photo reader (PaddleOCR on ONNX) and sharp are native code: loaded from node_modules, not bundled.
     serverComponentsExternalPackages: ['pdfjs-dist', '@gutenye/ocr-node', '@gutenye/ocr-common', '@gutenye/ocr-models', 'onnxruntime-node', 'sharp'],
@@ -14,5 +16,5 @@ const nextConfig = {
     config.resolve.alias = { ...config.resolve.alias, canvas: false };
     return config;
   },
-};
+});
 module.exports = nextConfig;
