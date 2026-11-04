@@ -11,13 +11,27 @@ interface Props {
   summary: string[];
   questions: string[];
   flagged: LabRow[];
+  testDate: string;
+  onTestDate: (isoDate: string) => void;
   onBack: () => void;
   onClear: () => void;
 }
 
 // Left column: the family's language. Right column: English clinical values for the doctor.
 // Everything printed here is either copied from the report or a question for the doctor, never an answer.
-export function DoctorSheet({ report, language, summary, questions, flagged, onBack, onClear }: Props) {
+/** "2026-03-12" -> "12 March 2026": the month is spelled out so no one has to guess day/month order. */
+function printableDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return '';
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function DoctorSheet({ report, language, summary, questions, flagged, testDate, onTestDate, onBack, onClear }: Props) {
   const ui = uiFor(language);
   return (
     <section className="card fade">
@@ -28,6 +42,12 @@ export function DoctorSheet({ report, language, summary, questions, flagged, onB
       </div>
       <div className="sheet-banner"><strong>Doctor sheet</strong><br />{ui.sheetBanner}</div>
       <h2 style={{ marginTop: 18 }}>{report.title}</h2>
+      <p className="lines fill">
+        <label htmlFor="test-date">{ui.testDate}</label>{' '}
+        <input id="test-date" type="date" className="date-input no-print" value={testDate} max={todayIso()} onChange={(e) => onTestDate(e.target.value)} />
+        <span className="print-only">{printableDate(testDate) || '____________________'}</span>
+      </p>
+      <p className="lines fill">{ui.mainConcern} ________________________________________</p>
       <div className="sheet-grid">
         <div className="sheet-col">
           <h3>{ui.forFamily(LANG_NAME[language])}</h3>
@@ -37,6 +57,11 @@ export function DoctorSheet({ report, language, summary, questions, flagged, onB
         </div>
         <div className="sheet-col">
           <h3>For the doctor (English)</h3>
+          <p className="muted small trust-note">
+            {report.source_kind === 'photo'
+              ? 'Read from a photo by AI, so every value is marked for checking. Compare with the original report.'
+              : 'Values below were read from the report by code, not AI. Flags compare each value with the range printed on the report.'}
+          </p>
           <ul>
             {flagged.map((r) => (
               <li key={r.test_name}>
