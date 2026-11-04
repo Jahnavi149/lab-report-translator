@@ -24,7 +24,7 @@ The video opens with a statement of what existed before the event and what was b
 
 ## How Meta's Muse is used
 
-Muse Spark runs through the Meta Model API (`lib/muse.ts`, model `muse-spark-1.3`). It has seven runtime jobs. All of them are about language, and none of them decides anything.
+Two Meta models run through the Meta Model API (`lib/muse.ts`). **Muse Spark** (`muse-spark-1.3`) has seven language jobs, and **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) hears the spoken question. Neither decides anything.
 
 | Job | What Muse does |
 |---|---|
@@ -35,6 +35,7 @@ Muse Spark runs through the Meta Model API (`lib/muse.ts`, model `muse-spark-1.3
 | Translation | Translates summary, questions and explanations |
 | Second-pass check | Re-checks each row against its own redacted line; it can only **lower** confidence |
 | Voice answers | Writes the words of one spoken answer (two intents only) |
+| Hearing | Muse Voice Transcribe turns one spoken question into text, in English, Telugu, Hindi or Spanish. Code then decides what it means |
 
 ## How code decides
 
@@ -51,7 +52,9 @@ Muse Spark runs through the Meta Model API (`lib/muse.ts`, model `muse-spark-1.3
 
 > "I can only explain what's printed on your report. For anything about what to do, please ask your doctor — I can help you write the question down."
 
-Speech is the browser's own (`SpeechRecognition` and `speechSynthesis`). The app never records or stores audio, but some browsers, such as Chrome, send speech to the browser maker for speech-to-text. Voice works in English, Telugu, Hindi and Spanish.
+**Hearing is Muse Voice Transcribe.** The page records one short question (up to 15 seconds, stopped by a pause), sends it to `/api/transcribe`, and gets text back. The audio is held in memory for that one request and never saved. The text then goes through the same keyword matcher as any other question, so a mis-heard word can at worst produce the fixed reply above. For English questions, the report's test names are sent along only to help the model spell them. **Speaking** is the browser's `speechSynthesis`. If transcription is unavailable, the browser's own speech recognition takes over (in some browsers, such as Chrome, the browser maker does that step). Voice works in English, Telugu, Hindi and Spanish.
+
+The recording is the user's voice, so it can carry a name if one is spoken aloud. Nothing downstream trusts it: the transcript passes the identifier check before any language model sees it. Please don't say a name.
 
 ## Privacy
 
@@ -63,7 +66,7 @@ No patient name, date of birth, ID, phone, email or address is sent to the AI. T
 
 The results page has a **What the AI sees** panel with the exact rows, lines and cleaned photo given to the AI.
 
-**No third-party model runs in the app. The only model called at runtime is Meta's Muse.** Where text sits on a photo is found by PaddleOCR running locally on this server as OCR tooling, like a PDF parser. It is a text-recognition network, not a language model, and it explains and decides nothing.
+**No third-party model runs in the app. The only models called at runtime are Meta's Muse models.** Where text sits on a photo is found by PaddleOCR running locally on this server as OCR tooling, like a PDF parser. It is a text-recognition network, not a language model, and it explains and decides nothing.
 
 ## Run it
 
@@ -94,7 +97,7 @@ Click **Try an example report** to see everything on a synthetic sample. Node 18
 ## Tests
 
 ```bash
-npm test      # 440 checks as of this commit; also runs before every `npm run build`
+npm test      # 468 checks as of this commit; also runs before every `npm run build`
 ```
 
 `scripts/evaluate.mjs` runs the real `lib/` modules, the real sample PDF, real OCR on fixture photos and a mocked Meta API. No key or network needed. It covers the flag engine, parser, AI-output safety filters, privacy (30+ adversarial identifier lines inspected in every request body), photo cleaning, voice intents and redirects, interface strings in all nine languages, and the Muse pipeline with bad output injected.
@@ -113,7 +116,7 @@ Next.js 14 and TypeScript (strict). No database, no accounts, nothing stored: fi
 - Handwriting, signatures, logos, faces and **QR codes** are not painted out. Crop them or upload a PDF.
 - OCR is English-first; the identifier patterns cover nine scripts, but have not been reviewed by native speakers.
 - **Translations and interface text need native-speaker review.** Test names, units and numbers stay in English so they match the paper report.
-- Voice and Listen tested with a real Telugu voice: **not yet** (stubbed voice only).
+- Voice tested end to end in a browser (microphone → WAV → Muse Voice Transcribe → answer) with synthetic English and Telugu speech, not with real people. Telugu transcription was exact on the sample question in most runs and off by one word in others. Listen mode with a real Telugu voice: **not yet**.
 - Reads digital PDFs; a scanned PDF should be uploaded as a photo. Unusual layouts can be skipped, and skipped lines are listed.
 - Not a medical device and not clinically validated.
 
