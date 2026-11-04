@@ -327,7 +327,7 @@ export default function Home() {
                         </div>
                       )}
                     </td>
-                    <td data-label={ui.valueCol}><span className="value">{formatValue(r.value, r.unit)}</span></td>
+                    <td data-label={ui.valueCol}><span className="value">{formatValue(r.value, r.unit, undefined, r.qualifier)}</span></td>
                     <td data-label={ui.rangeCol}>{rangeText(r, t('rangeNotOnReport'))}</td>
                     <td data-label={ui.flagCol}><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></td>
                     <td data-label={ui.meaningCol} dir="auto">{display.explain(r)}</td>

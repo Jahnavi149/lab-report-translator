@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { enhanceWithMuse } from '@/lib/enhance';
-import { flagFromEvidence, plainEnglishFor } from '@/lib/flags';
+import { flagForQualified, flagFromEvidence, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, extractFromPdfTextWithMuse, museConfigured } from '@/lib/muse';
 import { matchRowToLine, type OcrLine } from '@/lib/ocr';
 import { PHOTO_REFUSAL_MESSAGES, redactPhoto } from '@/lib/photo';
 import { buildAiInput, toMuseSafeReportText } from '@/lib/privacy';
 import { extractPdfTextWithAnchors } from '@/lib/pdftext';
 import { rateLimited } from '@/lib/ratelimit';
-import { verifyRows } from '@/lib/verify';
+import { qualifierOf, verifyRows } from '@/lib/verify';
 import { redactForMuse } from '@/lib/safety';
-import type { LabReport, LabRow } from '@/lib/types';
+import type { Flag, FlagSource, LabReport, LabRow } from '@/lib/types';
 
 export const runtime = 'nodejs';
 // A photo does a vision call and then the explain/summary/questions jobs, each allowed up to the Muse timeout.
@@ -21,6 +21,20 @@ const citationBox = (test_name: string, r: { value: number | null; unit: string;
   const box = matchRowToLine({ test_name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: r.reported_verdict ?? 'Unknown' }, ocr);
   return box ? { source_box: box } : {};
 };
+/**
+ * A value printed as a limit ("<0.3", ">60") is not an exact number. When every possible true value falls on the same side
+ * of the printed range, the flag is still decided by code; otherwise it stays Unknown and the row is sent to review.
+ */
+function withLimit(line: string, value: number | null, low: number | null, high: number | null, resolved: { flag: Flag; source: FlagSource }) {
+  const qualifier = value === null ? null : qualifierOf(line, value);
+  if (!qualifier || value === null) return { ...resolved, qualifier: undefined, reason: undefined };
+  if (resolved.source !== 'range') return { ...resolved, qualifier, reason: undefined };
+  const flag = flagForQualified(qualifier, value, low, high);
+  return flag === 'Unknown'
+    ? { flag, source: 'none' as FlagSource, qualifier, reason: `The report prints this value as a limit (${qualifier}${value}), not an exact number, so it could not be compared with the printed range. Check it against your original.` }
+    : { flag, source: resolved.source, qualifier, reason: undefined };
+}
+const QUALITATIVE = /\b(negative|positive|non[- ]?reactive|reactive|not detected|detected|absent|present|trace|abnormal)\b/i;
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 const normalizeLine = (line: string) => line.trim().replace(/[\u2013\u2014\u2212]/g, '-').replace(/\s+/g, ' ');
 
@@ -73,18 +87,21 @@ export async function POST(req: Request) {
         const n = (seen.get(key) ?? 0) + 1;
         seen.set(key, n);
         const name = n > 1 ? `${r.test_name} (${n})` : r.test_name;
-        const resolved = flagFromEvidence(r.value, r.ref_low, r.ref_high, r.reported_verdict);
-        const reviewReason = r.value === null
+        const printed = flagFromEvidence(r.value, r.ref_low, r.ref_high, r.reported_verdict);
+        const limit = withLimit(match.original, r.value, r.ref_low, r.ref_high, printed);
+        const resolved = { flag: limit.flag, source: limit.source };
+        const reviewReason = limit.reason ?? (r.value === null
           ? resolved.source === 'report_marker'
             ? `No numeric value or range is printed. The ${resolved.flag} flag is copied from the report's own verdict.`
             : 'No numeric value is printed for this test.'
           : resolved.source === 'report_marker'
             ? `No range is printed. The ${resolved.flag} flag is copied from the report's own verdict.`
-            : resolved.source === 'none' ? 'No range is printed for this test.' : undefined;
+            : resolved.source === 'none' ? 'No range is printed for this test.' : undefined);
         rows.push({
           test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: resolved.flag,
           flag_source: resolved.source,
-          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, resolved.flag),
+          ...(limit.qualifier ? { qualifier: limit.qualifier } : {}),
+          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, resolved.flag, limit.qualifier),
           confidence: reviewReason ? 'low' : 'high',
           ...(reviewReason ? { review_reason: reviewReason } : {}),
           source_text: match.original,
@@ -92,6 +109,10 @@ export async function POST(req: Request) {
         });
       }
       if (rows.length === 0) return fail('No lab results could be grounded in this PDF text. If it is a scan, upload it as an image instead, or try a clearer digital PDF.');
+      // Results written in words ("Negative", "Reactive") have no number to compare, so they are not rows. Say so, never drop them silently.
+      const notRead = sourceLines
+        .filter((l) => !usedLines.has(l.index) && l.redacted.length > 0 && l.redacted.length <= 160 && QUALITATIVE.test(l.redacted) && /[A-Za-z]{3,}.*[A-Za-z]{3,}/.test(l.redacted))
+        .map((l) => l.redacted).slice(0, 12);
       const verification = verifyRows(rows, text);
       const enhanced = await enhanceWithMuse(verification.rows, { check: true });
       const museNote = enhanced.flaggedByMuse.length > 0 ? ` Muse's second check also could not confirm: ${enhanced.flaggedByMuse.join(', ')}.` : '';
@@ -100,6 +121,7 @@ export async function POST(req: Request) {
         rows: enhanced.rows, summary: enhanced.summary, questions: enhanced.questions,
         verification_passed: verification.passed && enhanced.flaggedByMuse.length === 0,
         verification_note: `${verification.note}${museNote}`,
+        ...(notRead.length > 0 ? { skipped_lines: notRead } : {}),
         source_note: 'Read from your PDF. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: true, muse_features: ['PDF text extraction', ...enhanced.features],
         ai_input: buildAiInput(enhanced.rows, { reportText: text, redactedReportText: safePdf.text, photo: false, checked: true }),
@@ -120,16 +142,19 @@ export async function POST(req: Request) {
         const n = (seen.get(r.test_name.toLowerCase()) ?? 0) + 1;
         seen.set(r.test_name.toLowerCase(), n);
         const name = n > 1 ? `${r.test_name} (${n})` : r.test_name;
-        const resolved = flagFromEvidence(r.value, r.ref_low, r.ref_high, r.reported_verdict);
-        const reviewReason = r.value === null && resolved.source === 'report_marker'
+        const printed = flagFromEvidence(r.value, r.ref_low, r.ref_high, r.reported_verdict);
+        const limit = withLimit(r.source_text, r.value, r.ref_low, r.ref_high, printed);
+        const resolved = { flag: limit.flag, source: limit.source };
+        const reviewReason = limit.reason ?? (r.value === null && resolved.source === 'report_marker'
           ? `No numeric value or range is shown. The ${resolved.flag} verdict was read from the photo; check it against the original.`
           : resolved.source === 'report_marker'
             ? `No range is shown. The ${resolved.flag} verdict was read from the photo; check it against the original.`
-            : r.consistent ? 'Read from a photo: check this row against your original.' : 'Read from a photo, and the result evidence does not all match the text that was quoted. Check this row against your original.';
+            : r.consistent ? 'Read from a photo: check this row against your original.' : 'Read from a photo, and the result evidence does not all match the text that was quoted. Check this row against your original.');
         return {
           test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: resolved.flag,
           flag_source: resolved.source,
-          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, resolved.flag),
+          ...(limit.qualifier ? { qualifier: limit.qualifier } : {}),
+          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, resolved.flag, limit.qualifier),
           confidence: 'low',
           review_reason: reviewReason,
           source_text: r.source_text,

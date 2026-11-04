@@ -30,7 +30,7 @@ export function FamilyHandout({ report, language, summary, questions, explain, o
         {report.rows.map((r) => (
           <div key={r.test_name} className={`handout-row ${r.flag}`}>
             <div className="handout-name">{r.test_name}</div>
-            <div className="handout-value">{formatValue(r.value, r.unit)}</div>
+            <div className="handout-value">{formatValue(r.value, r.unit, undefined, r.qualifier)}</div>
             <div className="handout-range">{formatRangeCompact(r.ref_low, r.ref_high, r.unit, '—')}</div>
             <div><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></div>
             <div className="handout-text" dir="auto">{explain(r)}</div>

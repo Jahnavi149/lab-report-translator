@@ -32,7 +32,7 @@ export interface Ui {
 }
 
 const TE: Pack = {
-  flag: { High: 'ఎక్కువ', Low: 'తక్కువ', Normal: 'సాధారణ పరిధి', Unknown: 'పరిధి లేదు' },
+  flag: { High: 'ఎక్కువ', Low: 'తక్కువ', Normal: 'సాధారణ పరిధి', Unknown: "తెలియదు" },
   ui: {
     testCol: 'పరీక్ష', valueCol: 'మీ విలువ', rangeCol: 'నివేదికలోని పరిధి', flagCol: 'స్థితి', meaningCol: 'అర్థం',
     summaryHeading: 'సారాంశం — ముఖ్యమైనవి', resultsHeading: 'మీ ఫలితాలు, సులభ భాషలో',
@@ -40,9 +40,9 @@ const TE: Pack = {
     forFamily: (l) => `కుటుంబం కోసం (${l})`, questionsToAsk: 'అడగాల్సిన ప్రశ్నలు',
     mainConcern: 'ఈరోజు నా ముఖ్య ఆందోళన:', testDate: 'పరీక్ష తేదీ:',
     checklist: 'చెక్‌లిస్ట్', bringSheet: 'ఈ షీట్ తీసుకురండి', bringMeds: 'మీ మందుల జాబితా తీసుకురండి', bringPrevious: 'మునుపటి రిపోర్టులు తీసుకురండి', doctorAnswers: 'డాక్టర్ సమాధానాలు',
-    notMeanTitle: 'దీని అర్థం కాదు:', notMeanBody: 'ఒక్క ఎక్కువ లేదా తక్కువ విలువ రోగ నిర్ధారణ కాదు. దానిని మీ డాక్టర్ మాత్రమే సరైన సందర్భంలో అర్థం చేసుకోగలరు. మీకు అనారోగ్యంగా అనిపిస్తే వెంటనే వైద్య సహాయం తీసుకోండి. ఈ సాధనం అత్యవసర పరిస్థితిని అంచనా వేయలేదు.',
+    notMeanTitle: "దీని అర్థం ఇది కాదు:", notMeanBody: "ఒక్క ఎక్కువ లేదా తక్కువ విలువ రోగ నిర్ధారణ కాదు. దానిని మీ డాక్టర్ మాత్రమే సరైన సందర్భంలో అర్థం చేసుకోగలరు. మీకు అనారోగ్యంగా అనిపిస్తే వెంటనే వైద్య సహాయం తీసుకోండి. ఈ సాధనంతో అత్యవసరతను అంచనా వేయడం సాధ్యం కాదు.",
     infoOnly: 'సమాచారం కోసం మాత్రమే, రోగ నిర్ధారణ కాదు',
-    privacyNote: 'ఏదీ నిల్వ చేయబడదు. డిజిటల్ PDFలో గుర్తింపు వివరాలను తొలగించిన తర్వాత దాని టెక్స్ట్‌ను ఫలితాలు చదవడానికి Meta యొక్క Muse AIకి పంపుతాము. ఫోటోను ముందుగా ఈ సర్వర్‌లో శుభ్రం చేస్తాము. లేబుల్ లేని పేర్లను స్వయంచాలకంగా గుర్తించలేము; అప్‌లోడ్ చేసే ముందు హెడర్‌ను కత్తిరించండి. పంపినది ఏమిటో మీరు చూడవచ్చు.',
+    privacyNote: "ఏదీ నిల్వ చేయబడదు. డిజిటల్ PDFలలో, ఫలితాలను సంగ్రహించడానికి ఎంచుకోదగిన టెక్స్ట్‌ను Meta యొక్క Museకు పంపే ముందు గుర్తింపు వివరాలు తొలగించబడతాయి. ఫోటోలు ముందుగా ఈ సర్వర్‌లో శుభ్రం చేయబడతాయి. లేబుల్ లేని పేరు గుర్తించబడకపోవచ్చు, కాబట్టి అప్‌లోడ్ చేసే ముందు హెడర్‌ను కత్తిరించండి. AIకి ఖచ్చితంగా ఏమి అందిందో మీరు చూడవచ్చు.",
     footerNote: 'ఈ యాప్ ల్యాబ్ రిపోర్ట్‌ను వివరిస్తుంది. ఇది రోగ నిర్ధారణ చేయదు, చికిత్స చేయదు, వైద్య సలహాకు ప్రత్యామ్నాయం కాదు. మీ ఫలితాల గురించి ఎల్లప్పుడూ మీ డాక్టర్‌ను అడగండి.',
     languageLabel: 'భాష', largeText: 'A+ పెద్ద అక్షరాలు', normalText: 'సాధారణ అక్షరాలు', highContrast: 'ఎక్కువ కాంట్రాస్ట్', normalContrast: 'సాధారణ కాంట్రాస్ట్',
     heroTitleA: 'మీ ల్యాబ్ రిపోర్ట్,', heroTitleB: 'మీ కుటుంబ భాషలో.',
@@ -70,7 +70,7 @@ const TE: Pack = {
 };
 
 const HI: Pack = {
-  flag: { High: 'अधिक', Low: 'कम', Normal: 'सीमा में', Unknown: 'सीमा नहीं' },
+  flag: { High: 'अधिक', Low: 'कम', Normal: 'सीमा में', Unknown: "अज्ञात" },
   ui: {
     testCol: 'जाँच', valueCol: 'आपका मान', rangeCol: 'रिपोर्ट की सीमा', flagCol: 'स्थिति', meaningCol: 'इसका मतलब',
     summaryHeading: 'सारांश — सबसे ज़रूरी बातें', resultsHeading: 'आपके परिणाम, आसान भाषा में',
@@ -80,7 +80,7 @@ const HI: Pack = {
     checklist: 'चेकलिस्ट', bringSheet: 'यह शीट साथ लाएँ', bringMeds: 'अपनी दवाइयों की सूची साथ लाएँ', bringPrevious: 'पिछली रिपोर्टें साथ लाएँ', doctorAnswers: 'डॉक्टर के उत्तर',
     notMeanTitle: 'इसका मतलब यह नहीं है:', notMeanBody: 'केवल एक अधिक या कम मान अपने आप में निदान नहीं है। उसे केवल आपका डॉक्टर पूरे संदर्भ में समझ सकता है। यदि आप अस्वस्थ महसूस करें तो तुरंत चिकित्सा सहायता लें। यह टूल आपातकाल का अनुमान नहीं लगा सकता।',
     infoOnly: 'केवल जानकारी के लिए, निदान नहीं',
-    privacyNote: 'कुछ भी सहेजा नहीं जाता। डिजिटल PDF से पहचान संबंधी जानकारी हटाने के बाद उसका पाठ परिणाम पढ़ने के लिए Meta के Muse AI को भेजा जाता है। फ़ोटो को पहले इसी सर्वर पर साफ़ किया जाता है। बिना लेबल वाला नाम अपने आप नहीं पकड़ा जा सकता; अपलोड से पहले हेडर काट दें। आप ठीक-ठीक देख सकते हैं कि क्या भेजा गया।',
+    privacyNote: "कुछ भी सहेजा नहीं जाता। डिजिटल PDF से पहचान संबंधी जानकारी हटाने के बाद उसका चुनने लायक पाठ परिणाम पढ़ने के लिए Meta के Muse AI को भेजा जाता है। फ़ोटो को पहले इसी सर्वर पर साफ़ किया जाता है। बिना लेबल वाला नाम अपने आप नहीं पकड़ा जा सकता; अपलोड से पहले हेडर काट दें। आप ठीक-ठीक देख सकते हैं कि क्या भेजा गया।",
     footerNote: 'यह ऐप लैब रिपोर्ट को समझाता है। यह निदान या इलाज नहीं करता और चिकित्सकीय सलाह का विकल्प नहीं है। अपने परिणामों के बारे में हमेशा अपने डॉक्टर से पूछें।',
     languageLabel: 'भाषा', largeText: 'A+ बड़े अक्षर', normalText: 'सामान्य अक्षर', highContrast: 'अधिक कंट्रास्ट', normalContrast: 'सामान्य कंट्रास्ट',
     heroTitleA: 'आपकी लैब रिपोर्ट,', heroTitleB: 'आपके परिवार की भाषा में।',
@@ -99,16 +99,16 @@ const HI: Pack = {
     micNoKey: 'आवाज़ से सवाल अभी उपलब्ध नहीं हैं। बाकी सब कुछ पहले की तरह चलता है।',
     micDenied: 'माइक्रोफ़ोन बंद है या मौजूद नहीं है, इसलिए आवाज़ से सवाल बंद हैं। इस्तेमाल के लिए ब्राउज़र सेटिंग में माइक्रोफ़ोन की अनुमति दें।',
     micNoSpeech: 'मुझे कुछ सुनाई नहीं दिया। माइक दबाकर फिर से पूछें।',
-    micError: 'इस बार आवाज़ वाला सवाल काम नहीं किया। कृपया फिर से कोशिश करें।',
+    micError: "इस बार आवाज़ वाले सवाल ने काम नहीं किया। कृपया फिर से कोशिश करें।",
     askedDoctorNote: 'यह आपके डॉक्टर से पूछने वाला सवाल है, इसलिए मैंने जवाब देने के बजाय आपको डॉक्टर के पास भेजा।',
     youAskedLabel: 'आपने पूछा',
     answerLabel: 'जवाब',
-    micHint: 'ऐसे पूछें: “मेरा हीमोग्लोबिन क्या है?” · “सारांश बताओ” · “डॉक्टर शीट दिखाओ”',
+    micHint: "ऐसे पूछें: “मेरे हीमोग्लोबिन का क्या मतलब है?” · “सारांश बताओ” · “डॉक्टर शीट दिखाओ”",
   },
 };
 
 const ES: Pack = {
-  flag: { High: 'Alto', Low: 'Bajo', Normal: 'En rango', Unknown: 'Sin rango' },
+  flag: { High: 'Alto', Low: 'Bajo', Normal: 'En rango', Unknown: "Desconocido" },
   ui: {
     testCol: 'Prueba', valueCol: 'Su valor', rangeCol: 'Rango del informe', flagCol: 'Estado', meaningCol: 'Qué dice',
     summaryHeading: 'Resumen: lo más importante', resultsHeading: 'Sus resultados, en lenguaje sencillo',
@@ -118,7 +118,7 @@ const ES: Pack = {
     checklist: 'Lista de verificación', bringSheet: 'Traiga esta hoja', bringMeds: 'Traiga su lista de medicamentos', bringPrevious: 'Traiga informes anteriores', doctorAnswers: 'Respuestas del médico',
     notMeanTitle: 'Lo que esto NO significa:', notMeanBody: 'Un valor alto o bajo por sí solo no es un diagnóstico. Solo su médico puede interpretarlo en contexto. Si se siente mal, busque atención médica de inmediato. Esta herramienta no puede evaluar la urgencia.',
     infoOnly: 'Solo información, nunca un diagnóstico',
-    privacyNote: 'No se guarda nada. En los PDF digitales, se eliminan primero los datos identificativos y luego se envía el texto redactado a Muse AI de Meta para extraer los resultados. Las fotos se limpian primero en este servidor. Un nombre sin etiqueta puede pasar inadvertido; recorte el encabezado antes de subirlo. Puede ver exactamente qué se envió.',
+    privacyNote: "No se guarda nada. En los PDF digitales, se eliminan los datos identificativos antes de enviar el texto seleccionable a Muse de Meta para extraer los resultados. Las fotos se limpian primero en este servidor. Un nombre sin etiqueta puede pasar inadvertido, así que recorte el encabezado antes de subirlo. Puede ver exactamente lo que recibió la IA.",
     footerNote: 'Esta aplicación explica un informe de laboratorio. No diagnostica, no trata ni sustituye el consejo médico. Pregunte siempre a su médico sobre sus resultados.',
     languageLabel: 'Idioma', largeText: 'A+ Texto grande', normalText: 'Texto normal', highContrast: 'Alto contraste', normalContrast: 'Contraste normal',
     heroTitleA: 'Su informe de laboratorio,', heroTitleB: 'en el idioma de su familia.',
@@ -146,7 +146,7 @@ const ES: Pack = {
 };
 
 const TA: Pack = {
-  flag: { High: 'அதிகம்', Low: 'குறைவு', Normal: 'வரம்பிற்குள்', Unknown: 'வரம்பு இல்லை' },
+  flag: { High: 'அதிகம்', Low: 'குறைவு', Normal: 'வரம்பிற்குள்', Unknown: "தெரியவில்லை" },
   ui: {
     testCol: 'பரிசோதனை',
     valueCol: 'உங்கள் மதிப்பு',
@@ -164,11 +164,11 @@ const TA: Pack = {
     bringMeds: 'உங்கள் மருந்துகளின் பட்டியலைக் கொண்டு வாருங்கள்',
     bringPrevious: 'முந்தைய அறிக்கைகளைக் கொண்டு வாருங்கள்',
     doctorAnswers: 'மருத்துவரின் பதில்கள்',
-    notMeanTitle: 'இதன் அர்த்தம் இல்லை:',
+    notMeanTitle: "இதன் அர்த்தம் இதுவல்ல:",
     notMeanBody: 'ஒரு அதிகமான அல்லது குறைவான மதிப்பு மட்டுமே நோய் கண்டறிதல் ஆகாது. அதைச் சரியான சூழலில் உங்கள் மருத்துவரால் மட்டுமே புரிந்துகொள்ள முடியும். உடல்நிலை சரியில்லை என்றால் உடனே மருத்துவ உதவியை நாடுங்கள். அவசர நிலையை இந்தக் கருவியால் மதிப்பிட முடியாது.',
     infoOnly: 'தகவலுக்காக மட்டுமே, நோய் கண்டறிதல் அல்ல',
-    privacyNote: 'எதுவும் சேமிக்கப்படாது. டிஜிட்டல் PDF-இல் அடையாள விவரங்கள் நீக்கப்பட்ட பிறகு, முடிவுகளைப் படிக்க அதன் உரை Meta-வின் Muse AI-க்கு அனுப்பப்படும். புகைப்படங்கள் முதலில் இந்த சர்வரில் சுத்தம் செய்யப்படும். லேபிள் இல்லாத பெயர் தானாகக் கண்டறியப்படாமல் போகலாம்; பதிவேற்றுவதற்கு முன் தலைப்பைப் பகுதியை வெட்டுங்கள். அனுப்பப்பட்டதை நீங்கள் பார்க்கலாம்.',
-    footerNote: 'இந்த செயலி லேப் அறிக்கையை விளக்குகிறது. இது நோயைக் கண்டறியாது, சிகிச்சை அளிக்காது, மருத்துவ ஆலோசனைக்கு மாற்றும் அல்ல. உங்கள் முடிவுகளைப் பற்றி எப்போதும் உங்கள் மருத்துவரிடம் கேளுங்கள்.',
+    privacyNote: "எதுவும் சேமிக்கப்படாது. டிஜிட்டல் PDF-இல் அடையாள விவரங்கள் நீக்கப்பட்ட பிறகு, முடிவுகளைப் படிக்க அதன் தேர்ந்தெடுக்கக்கூடிய உரை Meta-வின் Muse AI-க்கு அனுப்பப்படும். புகைப்படங்கள் முதலில் இந்த சர்வரில் சுத்தம் செய்யப்படும். லேபிள் இல்லாத பெயர் தானாகக் கண்டறியப்படாமல் போகலாம்; பதிவேற்றுவதற்கு முன் தலைப்புப் பகுதியை வெட்டுங்கள். அனுப்பப்பட்டதை நீங்கள் பார்க்கலாம்.",
+    footerNote: "இந்த செயலி லேப் அறிக்கையை விளக்குகிறது. இது நோயைக் கண்டறியாது, சிகிச்சை அளிக்காது, மருத்துவ ஆலோசனைக்கு மாற்றாகவும் இல்லை. உங்கள் முடிவுகளைப் பற்றி எப்போதும் உங்கள் மருத்துவரிடம் கேளுங்கள்.",
     languageLabel: 'மொழி',
     largeText: 'A+ பெரிய எழுத்து',
     normalText: 'சாதாரண எழுத்து',
@@ -210,7 +210,7 @@ const TA: Pack = {
 };
 
 const KN: Pack = {
-  flag: { High: 'ಹೆಚ್ಚು', Low: 'ಕಡಿಮೆ', Normal: 'ಮಿತಿಯೊಳಗೆ', Unknown: 'ಮಿತಿ ಇಲ್ಲ' },
+  flag: { High: 'ಹೆಚ್ಚು', Low: 'ಕಡಿಮೆ', Normal: 'ಮಿತಿಯೊಳಗೆ', Unknown: "ತಿಳಿದಿಲ್ಲ" },
   ui: {
     testCol: 'ಪರೀಕ್ಷೆ',
     valueCol: 'ನಿಮ್ಮ ಮೌಲ್ಯ',
@@ -231,7 +231,7 @@ const KN: Pack = {
     notMeanTitle: 'ಇದರ ಅರ್ಥ ಇದಲ್ಲ:',
     notMeanBody: 'ಒಂದು ಹೆಚ್ಚು ಅಥವಾ ಕಡಿಮೆ ಮೌಲ್ಯ ಮಾತ್ರ ರೋಗನಿರ್ಣಯವಲ್ಲ. ಅದನ್ನು ಸರಿಯಾದ ಸಂದರ್ಭದಲ್ಲಿ ನಿಮ್ಮ ವೈದ್ಯರು ಮಾತ್ರ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಬಲ್ಲರು. ನಿಮಗೆ ಅಸ್ವಸ್ಥವೆನಿಸಿದರೆ ತಕ್ಷಣ ವೈದ್ಯಕೀಯ ಸಹಾಯ ಪಡೆಯಿರಿ. ಈ ಸಾಧನ ತುರ್ತು ಪರಿಸ್ಥಿತಿಯನ್ನು ಅಂದಾಜಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
     infoOnly: 'ಮಾಹಿತಿಗಾಗಿ ಮಾತ್ರ, ರೋಗನಿರ್ಣಯವಲ್ಲ',
-    privacyNote: 'ಯಾವುದೂ ಸಂಗ್ರಹವಾಗುವುದಿಲ್ಲ. ಡಿಜಿಟಲ್ PDFನ ಗುರುತಿನ ವಿವರಗಳನ್ನು ತೆಗೆದ ನಂತರ ಫಲಿತಾಂಶಗಳನ್ನು ಓದಲು ಅದರ ಪಠ್ಯವನ್ನು Meta ದ Muse AIಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ. ಫೋಟೋಗಳನ್ನು ಮೊದಲು ಈ ಸರ್ವರ್‌ನಲ್ಲಿ ಸ್ವಚ್ಛಗೊಳಿಸಲಾಗುತ್ತದೆ. ಲೇಬಲ್ ಇಲ್ಲದ ಹೆಸರು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪತ್ತೆಯಾಗದೇ ಇರಬಹುದು; ಅಪ್‌ಲೋಡ್ ಮಾಡುವ ಮೊದಲು ಹೆಡರ್ ಕತ್ತರಿಸಿ. ಏನು ಕಳುಹಿಸಲಾಗಿದೆ ಎಂಬುದನ್ನು ನೀವು ನೋಡಬಹುದು.',
+    privacyNote: "ಯಾವುದೂ ಸಂಗ್ರಹವಾಗುವುದಿಲ್ಲ. ಡಿಜಿಟಲ್ PDFನ ಗುರುತಿನ ವಿವರಗಳನ್ನು ತೆಗೆದ ನಂತರ ಫಲಿತಾಂಶಗಳನ್ನು ಓದಲು ಅದರ ಆಯ್ಕೆ ಮಾಡಬಹುದಾದ ಪಠ್ಯವನ್ನು Meta ದ Muse AIಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ. ಫೋಟೋಗಳನ್ನು ಮೊದಲು ಈ ಸರ್ವರ್‌ನಲ್ಲಿ ಸ್ವಚ್ಛಗೊಳಿಸಲಾಗುತ್ತದೆ. ಲೇಬಲ್ ಇಲ್ಲದ ಹೆಸರು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪತ್ತೆಯಾಗದೇ ಇರಬಹುದು; ಅಪ್‌ಲೋಡ್ ಮಾಡುವ ಮೊದಲು ಹೆಡರ್ ಕತ್ತರಿಸಿ. ಏನು ಕಳುಹಿಸಲಾಗಿದೆ ಎಂಬುದನ್ನು ನೀವು ನೋಡಬಹುದು.",
     footerNote: 'ಈ ಆಪ್ ಲ್ಯಾಬ್ ವರದಿಯನ್ನು ವಿವರಿಸುತ್ತದೆ. ಇದು ರೋಗನಿರ್ಣಯ ಮಾಡುವುದಿಲ್ಲ, ಚಿಕಿತ್ಸೆ ನೀಡುವುದಿಲ್ಲ, ವೈದ್ಯಕೀಯ ಸಲಹೆಗೆ ಪರ್ಯಾಯವೂ ಅಲ್ಲ. ನಿಮ್ಮ ಫಲಿತಾಂಶಗಳ ಬಗ್ಗೆ ಯಾವಾಗಲೂ ನಿಮ್ಮ ವೈದ್ಯರನ್ನು ಕೇಳಿ.',
     languageLabel: 'ಭಾಷೆ',
     largeText: 'A+ ದೊಡ್ಡ ಅಕ್ಷರ',
@@ -274,7 +274,7 @@ const KN: Pack = {
 };
 
 const BN: Pack = {
-  flag: { High: 'বেশি', Low: 'কম', Normal: 'সীমার মধ্যে', Unknown: 'সীমা নেই' },
+  flag: { High: 'বেশি', Low: 'কম', Normal: 'সীমার মধ্যে', Unknown: "অজানা" },
   ui: {
     testCol: 'পরীক্ষা',
     valueCol: 'আপনার মান',
@@ -295,7 +295,7 @@ const BN: Pack = {
     notMeanTitle: 'এর মানে এটি নয়:',
     notMeanBody: 'একটি বেশি বা কম মান নিজে থেকে রোগ নির্ণয় নয়। সঠিক প্রেক্ষাপটে শুধু আপনার ডাক্তারই তা বুঝতে পারেন। অসুস্থ বোধ করলে অবিলম্বে চিকিৎসা সহায়তা নিন। এই টুল জরুরি অবস্থা বিচার করতে পারে না।',
     infoOnly: 'শুধু তথ্যের জন্য, রোগ নির্ণয় নয়',
-    privacyNote: 'কিছুই সংরক্ষণ করা হয় না। ডিজিটাল PDF থেকে পরিচয়সংক্রান্ত তথ্য সরানোর পরে ফলাফল পড়ার জন্য তার লেখা Meta-র Muse AI-তে পাঠানো হয়। ছবি আগে এই সার্ভারে পরিষ্কার করা হয়। লেবেলবিহীন নাম স্বয়ংক্রিয়ভাবে ধরা নাও পড়তে পারে; আপলোডের আগে হেডার কেটে দিন। ঠিক কী পাঠানো হয়েছে তা আপনি দেখতে পারেন।',
+    privacyNote: "কিছুই সংরক্ষণ করা হয় না। ডিজিটাল PDF থেকে পরিচয়সংক্রান্ত তথ্য সরানোর পরে ফলাফল পড়ার জন্য তার বাছাই করা যায় এমন লেখা Meta-র Muse AI-তে পাঠানো হয়। ছবি আগে এই সার্ভারে পরিষ্কার করা হয়। লেবেলবিহীন নাম স্বয়ংক্রিয়ভাবে ধরা নাও পড়তে পারে; আপলোডের আগে হেডার কেটে দিন। ঠিক কী পাঠানো হয়েছে তা আপনি দেখতে পারেন।",
     footerNote: 'এই অ্যাপ ল্যাব রিপোর্ট ব্যাখ্যা করে। এটি রোগ নির্ণয় বা চিকিৎসা করে না এবং চিকিৎসকের পরামর্শের বিকল্পও নয়। আপনার ফলাফল নিয়ে সবসময় আপনার ডাক্তারকে জিজ্ঞাসা করুন।',
     languageLabel: 'ভাষা',
     largeText: 'A+ বড় অক্ষর',
@@ -338,7 +338,7 @@ const BN: Pack = {
 };
 
 const MR: Pack = {
-  flag: { High: 'जास्त', Low: 'कमी', Normal: 'मर्यादेत', Unknown: 'मर्यादा नाही' },
+  flag: { High: 'जास्त', Low: 'कमी', Normal: 'मर्यादेत', Unknown: "अज्ञात" },
   ui: {
     testCol: 'चाचणी',
     valueCol: 'तुमचे मूल्य',
@@ -359,7 +359,7 @@ const MR: Pack = {
     notMeanTitle: 'याचा अर्थ असा नाही:',
     notMeanBody: 'एक जास्त किंवा कमी मूल्य हे स्वतःहून निदान नाही. ते योग्य संदर्भात फक्त तुमचे डॉक्टरच समजू शकतात. तुम्हाला अस्वस्थ वाटत असेल तर लगेच वैद्यकीय मदत घ्या. हे साधन आणीबाणीचा अंदाज लावू शकत नाही.',
     infoOnly: 'फक्त माहितीसाठी, निदान नाही',
-    privacyNote: 'काहीही साठवले जात नाही. डिजिटल PDF मधील ओळख दर्शवणारी माहिती काढल्यानंतर निकाल वाचण्यासाठी त्याचा मजकूर Meta च्या Muse AI कडे पाठवला जातो. फोटो आधी याच सर्व्हरवर स्वच्छ केला जातो. लेबल नसलेले नाव आपोआप सापडेलच असे नाही; अपलोडपूर्वी हेडर कापून टाका. नेमके काय पाठवले गेले ते तुम्ही पाहू शकता.',
+    privacyNote: "काहीही साठवले जात नाही. डिजिटल PDF मधील ओळख दर्शवणारी माहिती काढल्यानंतर निकाल वाचण्यासाठी त्याचा निवडता येणारा मजकूर Meta च्या Muse AI कडे पाठवला जातो. फोटो आधी याच सर्व्हरवर स्वच्छ केला जातो. लेबल नसलेले नाव आपोआप सापडेलच असे नाही; अपलोडपूर्वी हेडर कापून टाका. नेमके काय पाठवले गेले ते तुम्ही पाहू शकता.",
     footerNote: 'हे ॲप लॅब अहवाल समजावून सांगते. ते निदान किंवा उपचार करत नाही आणि वैद्यकीय सल्ल्याला पर्याय नाही. तुमच्या निकालांबद्दल नेहमी तुमच्या डॉक्टरांना विचारा.',
     languageLabel: 'भाषा',
     largeText: 'A+ मोठे अक्षर',
@@ -402,7 +402,7 @@ const MR: Pack = {
 };
 
 const TL: Pack = {
-  flag: { High: 'Mataas', Low: 'Mababa', Normal: 'Nasa saklaw', Unknown: 'Walang saklaw' },
+  flag: { High: 'Mataas', Low: 'Mababa', Normal: 'Nasa saklaw', Unknown: "Hindi alam" },
   ui: {
     testCol: 'Pagsusuri', valueCol: 'Iyong halaga', rangeCol: 'Saklaw sa ulat', flagCol: 'Katayuan', meaningCol: 'Ibig sabihin',
     summaryHeading: 'Buod — ang pinakamahalaga', resultsHeading: 'Ang iyong mga resulta, sa simpleng salita',
@@ -412,7 +412,7 @@ const TL: Pack = {
     checklist: 'Checklist', bringSheet: 'Dalhin ang sheet na ito', bringMeds: 'Dalhin ang listahan ng iyong mga gamot', bringPrevious: 'Dalhin ang mga nakaraang ulat', doctorAnswers: 'Mga sagot ng doktor',
     notMeanTitle: 'Hindi ito nangangahulugan ng:', notMeanBody: 'Ang isang mataas o mababang halaga lamang ay hindi diyagnosis. Ang doktor mo lang ang makakapagpaliwanag nito ayon sa iyong kalagayan. Kung masama ang pakiramdam mo, humingi agad ng tulong medikal. Hindi nasusukat ng tool na ito kung gaano kaagarang kailangan ang pangangalaga.',
     infoOnly: 'Impormasyon lang, hindi diyagnosis',
-    privacyNote: 'Walang iniimbak. Sa mga digital na PDF, inaalis muna ang mga detalyeng nagpapakilala bago ipadala ang piling teksto sa Muse ng Meta upang kunin ang mga resulta. Nililinis muna ang mga larawan sa server na ito. Maaaring hindi matukoy ang pangalang walang label, kaya putulin ang header bago mag-upload. Makikita mo nang eksakto kung ano ang natanggap ng AI.',
+    privacyNote: "Walang iniimbak. Sa mga digital na PDF, inaalis muna ang mga detalyeng nagpapakilala bago ipadala ang mapipiling teksto sa Muse ng Meta upang kunin ang mga resulta. Nililinis muna ang mga larawan sa server na ito. Maaaring hindi matukoy ang pangalang walang label, kaya putulin ang header bago mag-upload. Makikita mo nang eksakto kung ano ang natanggap ng AI.",
     footerNote: 'Ipinapaliwanag ng app na ito ang ulat sa laboratoryo. Hindi ito nagdidiyagnos, hindi gumagamot, at hindi pamalit sa payong medikal. Palaging tanungin ang iyong doktor tungkol sa iyong mga resulta.',
     languageLabel: 'Wika', largeText: 'A+ Malaking teksto', normalText: 'Normal na teksto', highContrast: 'Mataas na contrast', normalContrast: 'Normal na contrast',
     heroTitleA: 'Ang iyong lab report,', heroTitleB: 'sa wika ng iyong pamilya.',
@@ -440,7 +440,7 @@ const TL: Pack = {
 };
 
 const MS: Pack = {
-  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam julat', Unknown: 'Tiada julat' },
+  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam julat', Unknown: "Tidak diketahui" },
   ui: {
     testCol: 'Ujian', valueCol: 'Nilai anda', rangeCol: 'Julat dalam laporan', flagCol: 'Status', meaningCol: 'Maksudnya',
     summaryHeading: 'Ringkasan — yang paling penting', resultsHeading: 'Keputusan anda, dalam bahasa mudah',
@@ -478,17 +478,17 @@ const MS: Pack = {
 };
 
 const AR: Pack = {
-  flag: { High: 'مرتفع', Low: 'منخفض', Normal: 'ضمن النطاق', Unknown: 'لا يوجد نطاق' },
+  flag: { High: 'مرتفع', Low: 'منخفض', Normal: 'ضمن النطاق', Unknown: "غير معروف" },
   ui: {
     testCol: 'الفحص', valueCol: 'قيمتك', rangeCol: 'النطاق في التقرير', flagCol: 'الحالة', meaningCol: 'ماذا يعني',
     summaryHeading: 'الملخص — الأهم', resultsHeading: 'نتائجك بلغة بسيطة',
     sheetBanner: 'ورقة الطبيب — جاهزة للطباعة. للمعلومات فقط وليست تشخيصًا. القيم والنطاقات الدقيقة محفوظة بالإنجليزية للطبيب.',
-    forFamily: (l) => `للعائلة (${l})`, questionsToAsk: 'أسئلة للسؤال عنها',
+    forFamily: (l) => `للعائلة (${l})`, questionsToAsk: "أسئلة لطرحها",
     mainConcern: 'همّي الرئيسي اليوم:', testDate: 'تاريخ الفحص:',
     checklist: 'قائمة المراجعة', bringSheet: 'أحضر هذه الورقة', bringMeds: 'أحضر قائمة أدويتك', bringPrevious: 'أحضر التقارير السابقة', doctorAnswers: 'إجابات الطبيب',
     notMeanTitle: 'ما لا يعنيه هذا:', notMeanBody: 'قيمة واحدة مرتفعة أو منخفضة وحدها ليست تشخيصًا. الطبيب وحده يستطيع تفسيرها في سياقها. إذا شعرت بتوعك فاطلب الرعاية الطبية فورًا. لا تستطيع هذه الأداة تقدير مدى الاستعجال.',
     infoOnly: 'للمعلومات فقط، وليست تشخيصًا',
-    privacyNote: 'لا يتم حفظ أي شيء. في ملفات PDF الرقمية تُزال بيانات التعريف أولًا ثم يُرسل النص القابل للتحديد إلى Muse من Meta لاستخراج النتائج. تُنظَّف الصور أولًا على هذا الخادم. قد لا يُكتشف اسم بلا تسمية، لذا اقصص الترويسة قبل الرفع. يمكنك رؤية ما استلمه الذكاء الاصطناعي بالضبط.',
+    privacyNote: "لا يتم حفظ أي شيء. في ملفات PDF الرقمية تُزال بيانات التعريف أولًا ثم يُرسل النص القابل للتحديد إلى Muse من Meta لاستخراج النتائج. تُنظَّف الصور أولًا على هذا الخادم. قد لا يُكتشف اسم بلا تسمية، لذا قصّ الترويسة قبل الرفع. يمكنك رؤية ما استلمه الذكاء الاصطناعي بالضبط.",
     footerNote: 'يشرح هذا التطبيق تقارير المختبر. لا يشخّص ولا يعالج ولا يغني عن المشورة الطبية. اسأل طبيبك دائمًا عن نتائجك.',
     languageLabel: 'اللغة', largeText: 'A+ نص كبير', normalText: 'نص عادي', highContrast: 'تباين عالٍ', normalContrast: 'تباين عادي',
     heroTitleA: 'تقرير مختبرك،', heroTitleB: 'بلغة عائلتك.',
@@ -516,7 +516,7 @@ const AR: Pack = {
 };
 
 const FR: Pack = {
-  flag: { High: 'Élevé', Low: 'Bas', Normal: 'Dans la plage', Unknown: 'Pas de plage' },
+  flag: { High: 'Élevé', Low: 'Bas', Normal: 'Dans la plage', Unknown: "Inconnu" },
   ui: {
     testCol: 'Analyse', valueCol: 'Votre valeur', rangeCol: 'Plage du rapport', flagCol: 'Statut', meaningCol: 'Ce que cela dit',
     summaryHeading: 'Résumé : l’essentiel', resultsHeading: 'Vos résultats, en langage simple',
@@ -554,7 +554,7 @@ const FR: Pack = {
 };
 
 const DE: Pack = {
-  flag: { High: 'Hoch', Low: 'Niedrig', Normal: 'Im Bereich', Unknown: 'Kein Bereich' },
+  flag: { High: 'Hoch', Low: 'Niedrig', Normal: 'Im Bereich', Unknown: "Unbekannt" },
   ui: {
     testCol: 'Test', valueCol: 'Ihr Wert', rangeCol: 'Bereich im Bericht', flagCol: 'Status', meaningCol: 'Bedeutung',
     summaryHeading: 'Zusammenfassung: das Wichtigste', resultsHeading: 'Ihre Ergebnisse in einfacher Sprache',
@@ -592,7 +592,7 @@ const DE: Pack = {
 };
 
 const PT: Pack = {
-  flag: { High: 'Alto', Low: 'Baixo', Normal: 'Dentro da faixa', Unknown: 'Sem faixa' },
+  flag: { High: 'Alto', Low: 'Baixo', Normal: 'Dentro da faixa', Unknown: "Desconhecido" },
   ui: {
     testCol: 'Exame', valueCol: 'Seu valor', rangeCol: 'Faixa no relatório', flagCol: 'Situação', meaningCol: 'O que significa',
     summaryHeading: 'Resumo: o mais importante', resultsHeading: 'Seus resultados, em linguagem simples',
@@ -602,7 +602,7 @@ const PT: Pack = {
     checklist: 'Lista de verificação', bringSheet: 'Leve esta folha', bringMeds: 'Leve a lista dos seus medicamentos', bringPrevious: 'Leve relatórios anteriores', doctorAnswers: 'Respostas do médico',
     notMeanTitle: 'O que isto NÃO significa:', notMeanBody: 'Um valor alto ou baixo isolado não é um diagnóstico. Só o seu médico pode interpretá-lo no contexto. Se você se sentir mal, procure atendimento imediatamente. Esta ferramenta não pode avaliar a urgência.',
     infoOnly: 'Apenas informação, nunca um diagnóstico',
-    privacyNote: 'Nada é guardado. Nos PDFs digitais, os dados de identificação são removidos antes de o texto selecionável ser enviado ao Muse da Meta para extrair os resultados. As fotos são limpas primeiro neste servidor. Um nome sem rótulo pode não ser detetado, por isso corte o cabeçalho antes de enviar. Pode ver exatamente o que a IA recebeu.',
+    privacyNote: "Nada é armazenado. Nos PDFs digitais, os dados de identificação são removidos antes que o texto selecionável seja enviado ao Muse da Meta para extrair os resultados. As fotos são limpas primeiro neste servidor. Um nome sem rótulo pode não ser detectado, então recorte o cabeçalho antes de enviar. Você pode ver exatamente o que a IA recebeu.",
     footerNote: 'Este aplicativo explica um relatório de laboratório. Ele não diagnostica, não trata e não substitui orientação médica. Pergunte sempre ao seu médico sobre os seus resultados.',
     languageLabel: 'Idioma', largeText: 'A+ Texto grande', normalText: 'Texto normal', highContrast: 'Alto contraste', normalContrast: 'Contraste normal',
     heroTitleA: 'Seu relatório de laboratório,', heroTitleB: 'no idioma da sua família.',
@@ -630,7 +630,7 @@ const PT: Pack = {
 };
 
 const ID: Pack = {
-  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam rentang', Unknown: 'Tanpa rentang' },
+  flag: { High: 'Tinggi', Low: 'Rendah', Normal: 'Dalam rentang', Unknown: "Tidak diketahui" },
   ui: {
     testCol: 'Pemeriksaan', valueCol: 'Nilai Anda', rangeCol: 'Rentang di laporan', flagCol: 'Status', meaningCol: 'Artinya',
     summaryHeading: 'Ringkasan: yang paling penting', resultsHeading: 'Hasil Anda, dalam bahasa sederhana',

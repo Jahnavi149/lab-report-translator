@@ -32,6 +32,8 @@ export interface LabRow {
   flag: Flag;
   /** Where the flag came from: the printed range, the report's own H/L marker, or nowhere. */
   flag_source?: FlagSource;
+  /** The report printed the value as a limit ("<0.3", ">60"), not an exact number. */
+  qualifier?: '<' | '>';
   plain_english: string;
   confidence: Confidence;
   /** Set whenever confidence is low, so the UI can say exactly why. */

@@ -76,7 +76,7 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
           <ul>
             {flagged.map((r) => (
               <li key={r.test_name}>
-                <strong>{r.test_name}</strong>: {formatValue(r.value, r.unit)} • Printed range: {formatRangeCompact(r.ref_low, r.ref_high, r.unit, 'not on report')} • {r.flag}
+                <strong>{r.test_name}</strong>: {formatValue(r.value, r.unit, undefined, r.qualifier)} • Printed range: {formatRangeCompact(r.ref_low, r.ref_high, r.unit, 'not on report')} • {r.flag}
                 {r.flag_source === 'report_marker' && ' (flag copied from the report’s own marker)'}
                 {r.confidence === 'low' && ' • needs review against the original'}
               </li>

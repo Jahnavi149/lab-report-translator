@@ -13,7 +13,7 @@ My parents speak Telugu and couldn't make sense of their own lab reports, so I b
 - **PDF or photo in, plain-language rows out.** Exact value, unit and printed range per test, with the flag worked out by code.
 - **Source citations.** Open your PDF or photo with the source line highlighted.
 - **Review before you trust.** A result the app is unsure about is marked *Needs review*; open it, compare it with the cited line, and approve or reject it. A result with no numeric range is flagged only if the report itself prints High, Low or Normal.
-- **15 languages:** English, Telugu, Hindi, Spanish, Tamil, Kannada, Bengali, Marathi, Tagalog, Malay, Arabic (right-to-left), French, German, Portuguese, Indonesian. Reports printed with decimal commas (`11,2`, `250.000`) are read correctly. → [Languages](docs/languages.md)
+- **15 languages:** English, Telugu, Hindi, Spanish, Tamil, Kannada, Bengali, Marathi, Tagalog, Malay, Arabic (right-to-left), French, German, Portuguese, Indonesian. Reports printed with decimal commas (`11,2`, `250.000`) are read correctly. Every translated string was reviewed entry by entry by two independent AI models (GPT and Gemini) over repeated rounds until both found nothing left to fix. → [Languages](docs/languages.md)
 - **Printable doctor sheet** with your language beside the English values and room for the doctor's answers; **large-print handout**; **WhatsApp share**; **Listen** mode; large-text and high-contrast modes.
 - **Nothing is stored.** Files are processed in memory and dropped when you press **Clear report**.
 
@@ -72,7 +72,7 @@ Or skip setup and use the [live app](https://lab-report-translator-chu4l7oeaa-el
 
 ## Tests
 
-`npm test` runs **726 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
+`npm test` runs **739 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
 
 ## Documentation
 
