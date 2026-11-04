@@ -31,23 +31,35 @@ function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function printDoctorSheet(testDate: string): void {
+  const originalTitle = document.title;
+  const restoreTitle = () => {
+    document.title = originalTitle;
+    window.removeEventListener('afterprint', restoreTitle);
+  };
+
+  document.title = `Doctor sheet - ${testDate || todayIso()}`;
+  window.addEventListener('afterprint', restoreTitle, { once: true });
+  window.print();
+}
+
 export function DoctorSheet({ report, language, summary, questions, flagged, testDate, onTestDate, onBack, onClear }: Props) {
   const ui = uiFor(language);
   return (
     <section className="card fade">
       <div className="no-print row">
         <button onClick={onBack}>← {ui.backBtn}</button>
-        <button className="primary" onClick={() => window.print()}>🖨 {ui.printBtn}</button>
+        <button className="primary" onClick={() => printDoctorSheet(testDate)}>🖨 {ui.printBtn}</button>
         <button onClick={onClear}>{ui.clearBtn}</button>
       </div>
-      <div className="sheet-banner"><strong>Doctor sheet</strong><br />{ui.sheetBanner}</div>
+      <div className="sheet-banner no-print" style={{ marginTop:'20px' }}><strong>Doctor sheet</strong><br />{ui.sheetBanner}</div>
       <h2 style={{ marginTop: 18 }}>{report.title}</h2>
       <p className="lines fill">
         <label htmlFor="test-date">{ui.testDate}</label>{' '}
         <input id="test-date" type="date" className="date-input no-print" value={testDate} max={todayIso()} onChange={(e) => onTestDate(e.target.value)} />
         <span className="print-only">{printableDate(testDate) || '____________________'}</span>
       </p>
-      <p className="lines fill">{ui.mainConcern} ________________________________________</p>
+      <p className="lines fill" style={{marginBottom: '20px'}}>{ui.mainConcern} ________________________________________</p>
       <div className="sheet-grid">
         <div className="sheet-col">
           <h3>{ui.forFamily(LANG_NAME[language])}</h3>
@@ -86,7 +98,10 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
       <p className="lines">________________________________________________________________________</p>
       <p className="lines">________________________________________________________________________</p>
       <p className="lines">________________________________________________________________________</p>
-      <p className="muted small">{ui.infoOnly}. {report.is_synthetic ? 'SYNTHETIC sample, not a real patient.' : ''}</p>
+      <p className={`muted small${report.is_synthetic ? '' : ' no-print'}`}>
+        <span className="no-print">{ui.infoOnly}. </span>
+        {report.is_synthetic ? 'SYNTHETIC sample, not a real patient.' : ''}
+      </p>
     </section>
   );
 }

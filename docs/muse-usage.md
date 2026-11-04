@@ -9,6 +9,7 @@ Only Meta models are called at runtime. Both go through the Meta Model API from 
 
 | Job | Model | What it receives | What it produces | Entry point |
 |---|---|---|---|---|
+| PDF reading | Muse Spark | The locally redacted selectable text of the PDF (`MuseSafeReportText`) | Rows, each quoting its exact source line | `extractFromPdfTextWithMuse` |
 | Photo reading | Muse Spark (vision) | The cleaned photo only | Rows read from the picture | `extractFromImageWithMuse` |
 | Explanations | Muse Spark | Test name, value, unit, printed range, flag | One natural sentence per row | `enhanceWithMuse` ([`lib/enhance.ts`](../lib/enhance.ts)) |
 | Summary | Muse Spark | The same structured rows | 3-line summary | `enhanceWithMuse` |
@@ -20,8 +21,9 @@ Only Meta models are called at runtime. Both go through the Meta Model API from 
 
 ## What Muse never does
 
-- Set a flag, value, unit or range.
-- Receive the report text, a file name, or an identifier (see [Privacy](privacy.md)).
+- Set a flag. Flags come from [`lib/flags.ts`](../lib/flags.ts) only.
+- Have its extracted numbers trusted: a row counts only if its values sit on the exact source line it quotes.
+- Receive an identifier, a file name or an original upload (see [Privacy](privacy.md)).
 - Have the last word: every sentence passes [`lib/safety.ts`](../lib/safety.ts), and failures fall back to code-written text (see [How it works](how-it-works.md)).
 
 ## Settings

@@ -25,7 +25,7 @@ Test names, units and numbers stay as printed so they match the paper report. Ar
 
 ## Reports printed in different number styles
 
-The parser decides the style once per report ([`lib/parse.ts`](../lib/parse.ts)):
+Muse reads the rows from a PDF, and code then checks every number against the printed line in either style ([`lib/verify.ts`](../lib/verify.ts)). The line parser ([`lib/parse.ts`](../lib/parse.ts)), used for photo cleaning and re-reading, decides the style once per report:
 
 | Printed | Read as |
 |---|---|

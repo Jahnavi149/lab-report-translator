@@ -57,14 +57,16 @@ export interface LabReport {
 }
 
 // --- Privacy types --------------------------------------------------------------------------------
-// Muse call sites accept ONLY these two types. Both are "branded": a LabRow or a plain string does not
-// typecheck, and the only code that can create them is lib/privacy.ts (rows) and lib/safety.ts (text).
-// So raw report text cannot reach the model by accident; the compiler refuses it.
+// Muse call sites accept ONLY these branded inputs: a LabRow or a plain string does not typecheck, and the only
+// code that can create them is lib/privacy.ts (rows and PDF text) and lib/safety.ts (individual lines).
+// So unredacted report text cannot reach the model by accident; PDF text must first become MuseSafeReportText.
 declare const museSafe: unique symbol;
 /** The fields Muse may see about one result. No source line, no file name, no free text. */
 export type MuseSafeRow = Pick<LabRow, 'test_name' | 'value' | 'unit' | 'ref_low' | 'ref_high' | 'flag'> & { readonly [museSafe]: true };
 /** One report line with identifying lines and patterns already removed. */
 export type MuseSafeLine = string & { readonly [museSafe]: true };
+/** Complete selectable PDF text after the local identifier redactor has processed it. */
+export type MuseSafeReportText = string & { readonly [museSafe]: true };
 
 /**
  * A photo that went through lib/photo.ts: identifiers found by the patterns are painted out of the
@@ -91,6 +93,8 @@ export interface AiInputDisclosure {
   source_lines: string[];
   /** Photo uploads: a picture is sent to be read, after identifiers were painted out of it (see photo_preview). */
   photo: boolean;
+  /** Digital PDFs: the exact redacted selectable text sent to Muse for row extraction. */
+  redacted_report_text?: string;
   /** Photo uploads: the exact image sent, as a small data URL. */
   photo_preview?: string;
   /** Photo uploads: how many regions were painted out. */

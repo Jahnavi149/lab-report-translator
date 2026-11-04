@@ -7,18 +7,23 @@
 ## The flow
 
 ```
-PDF ──► pdf.js text ──► parser ──► verifier ──► flag engine ──► Muse (words only) ──► safety check ──► page
+PDF ──► pdf.js text ──► redact identifiers ──► Muse reads rows ──► grounding check ──► verifier ──► flag engine ──► Muse writes words ──► safety check ──► page
 Photo ─► local OCR ─► paint out identifiers ─► read again ─► Muse vision ─► flag engine ─► ... (same)
 ```
 
 | Step | File | What it does |
 |---|---|---|
 | Read | [`lib/pdftext.ts`](../lib/pdftext.ts), [`lib/photo.ts`](../lib/photo.ts), [`lib/ocr.ts`](../lib/ocr.ts) | Text from a PDF; or a cleaned photo plus local OCR for line positions |
-| Parse | [`lib/parse.ts`](../lib/parse.ts) | Test name, value, unit, printed range. Decides dot or comma number style per report |
+| Extract | [`lib/muse.ts`](../lib/muse.ts) `extractFromPdfTextWithMuse`, [`app/api/analyze/route.ts`](../app/api/analyze/route.ts) | Muse proposes rows from the redacted PDF text. A row is accepted only if its test name, value, unit and range appear on one exact source line |
+| Parse | [`lib/parse.ts`](../lib/parse.ts) | Reads result lines for photo cleaning and re-reading. Decides dot or comma number style per report |
 | Verify | [`lib/verify.ts`](../lib/verify.ts) | Each extracted number must be found on its own source line, or the row is marked low confidence |
 | Flag | [`lib/flags.ts`](../lib/flags.ts) | High, Low or Normal against the printed range; Unknown if none is printed |
 | Write | [`lib/muse.ts`](../lib/muse.ts), [`lib/enhance.ts`](../lib/enhance.ts) | Muse writes explanations, summary and doctor questions |
 | Check | [`lib/safety.ts`](../lib/safety.ts) | Every Muse sentence must pass before it is shown |
+
+## Extraction is grounded
+
+Muse never gets the last word on a number. For a PDF, the extracted value, unit and range must be found on the exact quoted line (comma, dot and space thousands all accepted), the quoted line must exist in the report, and the row is re-checked by the verifier. Anything else is dropped.
 
 ## Flags are decided by code
 

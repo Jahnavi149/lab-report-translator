@@ -2,19 +2,19 @@
 
 [← Back to README](../README.md)
 
-**No patient name, date of birth, ID, phone, email or address is sent to the AI.** Three layers, so one failing does not leak.
+**No patient name, date of birth, ID, phone, email or address is sent to the AI.** Three layers, so one failing does not leak. Labelled identifiers are removed before anything is sent; an unlabelled name in a PDF can slip past pattern matching, so the results page shows the exact redacted text that was sent.
 
-## Layer 1: structured rows only
+## Layer 1: branded inputs
 
-Every Muse function takes `MuseSafeRow[]` (test name, value, unit, printed range, flag), a branded type. A raw row, report string or file name does not compile at a Muse call site, and the build fails if that stops being true ([`lib/privacy.typecheck.ts`](../lib/privacy.typecheck.ts), [`lib/privacy.ts`](../lib/privacy.ts)).
+PDF extraction accepts only `MuseSafeReportText`, a type that can only be created after local redaction. Every later job takes `MuseSafeRow[]` (test name, value, unit, printed range, flag). A raw report string, raw row, file name or original upload does not compile at a Muse call site, and the build fails if that stops being true ([`lib/privacy.typecheck.ts`](../lib/privacy.typecheck.ts), [`lib/privacy.ts`](../lib/privacy.ts)).
 
 ## Layer 2: pattern redactor
 
-[`lib/redact.ts`](../lib/redact.ts). The only free text sent is each result's own line.
+[`lib/redact.ts`](../lib/redact.ts). Runs on the PDF text before it is sent, and on each result line used for the second-pass check.
 
 - Lines with a labelled identifier are dropped. Labels are covered in English, Spanish, French, German, Portuguese, Indonesian, Malay, Tagalog, Arabic and six Indian languages.
 - Identifier-like patterns (phone, email, ID numbers, dates of birth) are masked.
-- A line with any unexplained word is withheld.
+- For second-pass lines, a line with any unexplained word is withheld.
 - Arabic-Indic digits and Arabic diacritics are normalised first, so they cannot hide a label.
 
 ## Layer 3: photo cleaning
@@ -23,7 +23,7 @@ Every Muse function takes `MuseSafeRow[]` (test name, value, unit, printed range
 
 ## See it yourself
 
-The results page has a **What the AI sees** panel showing the exact rows, lines and cleaned photo given to the AI, and how many identifiers were kept away.
+The results page has a **What the AI sees** panel showing the exact redacted PDF text, rows, lines and cleaned photo given to the AI, and how many identifiers were kept away.
 
 ## Nothing is stored
 

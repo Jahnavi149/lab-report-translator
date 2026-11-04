@@ -22,6 +22,7 @@ Only Meta models are called at runtime: **Muse Spark** (`muse-spark-1.3`) writes
 
 | Job | Model |
 |---|---|
+| Read a PDF's redacted text into rows | Muse Spark |
 | Read a cleaned photo into rows | Muse Spark (vision) |
 | Explanations, 3-line summary, doctor questions | Muse Spark |
 | Translation into 14 languages | Muse Spark |
@@ -33,12 +34,12 @@ Every call, with inputs, outputs and code locations: [Muse usage](docs/muse-usag
 
 ## AI explains, code decides
 
-Muse never sets a flag, a value or a range.
+Muse reads the table and writes the words. Code checks the evidence and decides every flag.
 
 | Plain code does | Muse does |
 |---|---|
-| Reads values, units and printed ranges, and checks each number against its source line | Writes the plain-language sentences |
-| **Flag engine** ([`lib/flags.ts`](lib/flags.ts)): High, Low or Normal against the printed range; Unknown if none; conflicting ranges become Needs review | Translates them |
+| Accepts a row Muse extracted only if its test name, value, unit and range sit on one exact source line of the report | Reads the redacted PDF text or cleaned photo into rows |
+| **Flag engine** ([`lib/flags.ts`](lib/flags.ts)): High, Low or Normal against the printed range; Unknown if none; conflicting ranges become Needs review | Writes the plain-language sentences and translates them |
 | **Safety check** ([`lib/safety.ts`](lib/safety.ts)) on every sentence: right test and value, no other number, direction matches the flag, no diagnosis, treatment, diet or risk talk | Hears the spoken question |
 | **Fallback chain:** if Muse's output fails a check or the call fails, the code-written sentence is shown instead | |
 
@@ -46,11 +47,11 @@ Details: [How it works](docs/how-it-works.md).
 
 ## Privacy: no identifier reaches the AI
 
-1. **Structured rows only.** Muse functions only accept a branded type holding test name, value, unit, range and flag, and the build fails if a raw string could reach one.
-2. **Pattern redactor.** Lines with a labelled name, birth date, ID, phone or address are dropped; anything unexplained is withheld.
+1. **Branded inputs.** PDF text reaches Muse only as a type created after redaction; every later job gets just test name, value, unit, range and flag. The build fails if a raw string or an original upload could reach a Muse call.
+2. **Pattern redactor.** Lines with a labelled name, birth date, ID, phone or address are dropped and identifier patterns are masked before any PDF text is sent.
 3. **Photo cleaning.** Identifiers are painted black on the pixels, then the picture is read again; if any painted text is still readable, the photo is refused.
 
-A **What the AI sees** panel on the results page shows exactly what was sent. → [Privacy](docs/privacy.md)
+A **What the AI sees** panel on the results page shows exactly what was sent, including the redacted PDF text. → [Privacy](docs/privacy.md)
 
 ## Ask by voice
 
@@ -64,11 +65,11 @@ npm run dev                                 # http://localhost:3000
 # then click "Try an example report"
 ```
 
-Or skip setup and use the [live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/). Node 18.17+. Without a key the PDF flow still works on code-written sentences.
+Or skip setup and use the [live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/). Node 18.17+. PDF and photo reading use your Meta key; without one the app shows the example report only.
 
 ## Tests
 
-`npm test` runs **583 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
+`npm test` runs **587 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
 
 ## Documentation
 
