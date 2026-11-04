@@ -1,8 +1,8 @@
 import type { MuseSafeLine } from './types';
 
 // Layer 2 of the privacy design (see README, "Privacy"): a pure, testable redactor. No network, no env.
-// Layer 1 (lib/privacy.ts) already means the model is never handed the report text; this module is the backstop for
-// the one free-text line per result that is still sent, and it also keeps identifiers from being parsed as results.
+// Digital-PDF extraction deliberately sends complete selectable text through this redactor before it reaches Muse.
+// This module also protects the one free-text line per result used by the second-pass check.
 //
 // What it does, in order, for every line:
 //   1. Normalises the text so tricks do not hide an identifier: Unicode compatibility forms (full-width letters and

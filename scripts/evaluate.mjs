@@ -433,6 +433,24 @@ check('vision: row whose numbers are not on its quoted line is marked inconsiste
 check('vision: a range Muse got backwards (low > high) is replaced by the one our parser reads from the quoted line', vis.find((r) => r.test_name === 'Glucose').ref_low === 70 && vis.find((r) => r.test_name === 'Glucose').ref_high === 99);
 check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/jpeg;base64,'));
 
+// Digital PDF extraction receives the complete redacted text and must ground every row in one exact line.
+const safePdfText = privacy.toMuseSafeReportText([
+  'Patient Name: Sample Person',
+  'DOB: 01/01/1970',
+  'Hemoglobin 11.2 g/dL 12.0 - 15.5',
+  'Glucose 92 mg/dL 70 - 99',
+].join('\n'));
+calls = mockMuse(() => ({ rows: [
+  { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' },
+  { test_name: 'Glucose', value: 999, unit: 'mg/dL', ref_low: 70, ref_high: 99, source_text: 'Glucose 92 mg/dL 70 - 99' },
+  { test_name: 'Invented', value: 5, unit: 'mg/dL', ref_low: null, ref_high: null, source_text: 'Invented 5 mg/dL' },
+] }));
+const pdfExtracted = await muse.extractFromPdfTextWithMuse(safePdfText.text);
+check('PDF extraction: identifying lines are removed before the complete selectable text is sent', !JSON.stringify(calls[0].body.messages).includes('Sample Person') && !JSON.stringify(calls[0].body.messages).includes('01/01/1970') && JSON.stringify(calls[0].body.messages).includes('Hemoglobin 11.2'));
+check('PDF extraction: a row needs an exact source line, so an invented line is dropped', pdfExtracted.length === 2 && !pdfExtracted.some((r) => r.test_name === 'Invented'));
+check('PDF extraction: a value not found on its quoted source line fails grounding', pdfExtracted.find((r) => r.test_name === 'Hemoglobin')?.consistent === true && pdfExtracted.find((r) => r.test_name === 'Glucose')?.consistent === false);
+check('PDF extraction: the model receives JSON instructions at zero temperature', calls[0].body.response_format?.type === 'json_object' && calls[0].body.temperature === 0);
+
 // A live run showed Muse quoting "(<200)" correctly but leaving both bounds null, turning a High result into "Unknown".
 // The range is now re-read from the quoted line by our own parser, so it no longer depends on Muse filling the fields.
 calls = mockMuse(() => ({ rows: [

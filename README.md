@@ -2,7 +2,7 @@
 
 **Turns a lab report (PDF or photo) into plain language in nine languages, with a one-page sheet for the doctor.**
 
-My parents speak Telugu and couldn't make sense of their own lab reports, so I built this. Upload a PDF or a photo and get every result in plain sentences, flags worked out by code, and a printable sheet to take to the doctor. Meta's Muse Spark writes the language; plain code decides every flag, value and range. Your lab report, in your family's language.
+My parents speak Telugu and couldn't make sense of their own lab reports, so I built this. Upload a PDF or a photo and get every result in plain sentences, flags worked out by code, and a printable sheet to take to the doctor. Meta's Muse Spark extracts grounded result rows and writes the language; plain code validates the evidence and decides every flag. Your lab report, in your family's language.
 
 > **Information only, never a diagnosis.** This app does not diagnose, recommend treatment, assess risk or give medical advice. It repeats what the report prints, says whether a value is inside or outside the *printed* range, and lists questions to ask a doctor.
 
@@ -28,6 +28,7 @@ Two Meta models run through the Meta Model API (`lib/muse.ts`). **Muse Spark** (
 
 | Job | What Muse does |
 |---|---|
+| PDF reading | Reads locally redacted selectable PDF text into grounded rows |
 | Photo reading | Vision: reads a cleaned photo into rows |
 | Explanations | Rewrites each row's sentence naturally |
 | Summary | Writes the 3-line summary |
@@ -39,7 +40,7 @@ Two Meta models run through the Meta Model API (`lib/muse.ts`). **Muse Spark** (
 
 ## How code decides
 
-**AI explains, code decides.** Muse never sets a flag, value, unit or range.
+**AI extracts and explains; code validates and decides flags.** Muse proposes values, units and ranges from redacted PDF text or a cleaned photo. Code accepts PDF rows only when the returned fields are grounded in an exact source line, and code always calculates the flag.
 
 - `lib/flags.ts` compares each value with the printed range. Several conflicting ranges for one test: **Needs review**, never a guess.
 - `lib/safety.ts` checks every sentence Muse writes: the right test and value, no other number, a direction that matches the code's flag, and no diagnosis, treatment, diet, supplement, risk, urgency or "you may have".
@@ -58,13 +59,13 @@ The recording is the user's voice, so it can carry a name if one is spoken aloud
 
 ## Privacy
 
-No patient name, date of birth, ID, phone, email or address is sent to the AI. Three layers, so one failing does not leak:
+Labelled patient names, dates of birth, IDs, phone numbers, emails and addresses are removed before content is sent to the AI. The app uses three layers:
 
-1. **Structured rows only.** Every Muse function takes `MuseSafeRow[]` (test name, value, unit, printed range, flag), a branded type. A raw row, report string or file name does not compile at a Muse call site, and the build fails if that stops being true (`lib/privacy.typecheck.ts`).
-2. **Pattern redactor** (`lib/redact.ts`). The only free text sent is each result's own line. Lines with a labelled identifier (nine scripts) are dropped, identifier-like patterns are masked, and a line with any unexplained word is withheld.
+1. **Branded model inputs.** PDF extraction accepts only `MuseSafeReportText`, created after local redaction. Later jobs accept only `MuseSafeRow[]` (test name, value, unit, printed range, flag). A raw report string, raw row or original upload does not compile at a Muse call site (`lib/privacy.typecheck.ts`).
+2. **Pattern redactor** (`lib/redact.ts`). Before selectable PDF text is sent, lines with a labelled identifier (nine scripts) are dropped and identifier-like patterns are masked. Result lines used for the second check have an additional unexplained-word rule. Pattern matching can miss an unlabelled name, so the results page shows the exact redacted text sent.
 3. **Photo cleaning** (`lib/photo.ts`). Local OCR finds every text box, identifier boxes are **painted black on the pixels**, and the painted picture is **read again**. If painted text is still readable, the photo is refused. Only the painted picture can reach Muse.
 
-The results page has a **What the AI sees** panel with the exact rows, lines and cleaned photo given to the AI.
+The results page has a **What the AI sees** panel with the exact redacted PDF text, rows, result lines or cleaned photo given to the AI. Pattern redaction cannot guarantee that an unlabelled name will be recognized.
 
 **No third-party model runs in the app. The only models called at runtime are Meta's Muse models.** Where text sits on a photo is found by PaddleOCR running locally on this server as OCR tooling, like a PDF parser. It is a text-recognition network, not a language model, and it explains and decides nothing.
 
@@ -91,13 +92,13 @@ npm run dev          # http://localhost:3000
 
 Click **Try an example report** to see everything on a synthetic sample. Node 18.17 or newer. `.env.local` is git-ignored; `.env.example` documents every variable.
 
-- The PDF flow also runs without a key, on code-written sentences. Photo reading, translation and voice use your key.
+- PDF and photo reading require a configured Muse key. Code-written explanation, summary and question templates remain the fallback after extraction.
 - Slow host? Raise `MUSE_TIMEOUT_MS` (default 45000 ms; vision calls 55000).
 
 ## Tests
 
 ```bash
-npm test      # 468 checks as of this commit; also runs before every `npm run build`
+npm test      # 472 checks as of this commit; also runs before every `npm run build`
 ```
 
 `scripts/evaluate.mjs` runs the real `lib/` modules, the real sample PDF, real OCR on fixture photos and a mocked Meta API. No key or network needed. It covers the flag engine, parser, AI-output safety filters, privacy (30+ adversarial identifier lines inspected in every request body), photo cleaning, voice intents and redirects, interface strings in all nine languages, and the Muse pipeline with bad output injected.
@@ -108,7 +109,7 @@ npm test      # 468 checks as of this commit; also runs before every `npm run bu
 
 ## Architecture
 
-Next.js 14 and TypeScript (strict). No database, no accounts, nothing stored: files are processed in memory on the server, and the page drops the report when you click **Clear report**. PDFs go through pdf.js, a parser and the flag engine; photos go through local OCR and painting, then Muse vision. Muse jobs run in parallel and each passes `lib/safety.ts`. Deploy on any Node host: the photo reader needs about 60 MB for the OCR runtime and models, and photos are refused, not sent uncleaned, if it cannot run.
+Next.js 14 and TypeScript (strict). No database, no accounts, nothing stored: files are processed in memory on the server, and the page drops the report when you click **Clear report**. Digital PDFs go through pdf.js, local text redaction, Muse extraction, evidence grounding and the flag engine; photos go through local OCR and painting, then Muse vision. Muse language jobs run in parallel and each passes `lib/safety.ts`. Deploy on any Node host: the photo reader needs about 60 MB for the OCR runtime and models, and photos are refused, not sent uncleaned, if it cannot run.
 
 ## Limitations
 
