@@ -4,8 +4,10 @@ import type { ImageSourceBox } from './types';
 // inside this server) finds every printed text box and its exact pixel position, and plain code matches each row to one line. A row is highlighted only when exactly one line
 // carries both its test name and its value; otherwise it gets no highlight, never a wrong one.
 
-export interface OcrWord { text: string; x0: number; y0: number; x1: number; y1: number }
-export interface OcrLine { text: string; box: ImageSourceBox }
+/** x0..y1 is the box on the photo; f* is the same box after straightening the page (set when the photo is tilted). */
+export interface OcrWord { text: string; x0: number; y0: number; x1: number; y1: number; fx0?: number; fy0?: number; fx1?: number; fy1?: number; /** The four corners the engine found (pixels), for painting a region out exactly. */ quad?: number[][] }
+/** box = where to draw on the photo. flat = the same place on the straightened page, used only to judge layout (same row, left of, between). */
+export interface OcrLine { text: string; box: ImageSourceBox; flat?: ImageSourceBox; /** The engine's own text boxes that make up this line, in reading order (joined with single spaces to make `text`). */ words?: OcrWord[] }
 type RowKey = { test_name: string; value: number; unit?: string; ref_low: number | null; ref_high: number | null };
 
 // --- image header facts (no image library needed) -----------------------------------------------
@@ -66,14 +68,16 @@ export function imageInfo(buf: Buffer): ImageInfo | null {
 export function groupWordsIntoLines(words: OcrWord[], width: number, height: number): OcrLine[] {
   const ok = words.filter((w) => w.text.trim() && w.x1 > w.x0 && w.y1 > w.y0 && w.x1 <= width + 2 && w.y1 <= height + 2);
   if (ok.length === 0) return [];
-  const heights = ok.map((w) => w.y1 - w.y0).sort((a, b) => a - b);
+  // Layout is judged on the straightened page when there is one; the drawn box always comes from the photo itself.
+  const fy0 = (w: OcrWord) => w.fy0 ?? w.y0, fy1 = (w: OcrWord) => w.fy1 ?? w.y1;
+  const heights = ok.map((w) => fy1(w) - fy0(w)).sort((a, b) => a - b);
   const tolerance = 0.5 * (heights[Math.floor(heights.length / 2)] as number);
-  const sorted = [...ok].sort((a, b) => a.y0 + a.y1 - (b.y0 + b.y1));
+  const sorted = [...ok].sort((a, b) => fy0(a) + fy1(a) - (fy0(b) + fy1(b)));
   const lines: { cy: number; words: OcrWord[] }[] = [];
   for (const w of sorted) {
-    const cy = (w.y0 + w.y1) / 2;
+    const cy = (fy0(w) + fy1(w)) / 2;
     const last = lines[lines.length - 1];
-    if (last && Math.abs(last.cy - cy) <= tolerance) { last.words.push(w); last.cy = last.words.reduce((s, x) => s + (x.y0 + x.y1) / 2, 0) / last.words.length; }
+    if (last && Math.abs(last.cy - cy) <= tolerance) { last.words.push(w); last.cy = last.words.reduce((s, x) => s + (fy0(x) + fy1(x)) / 2, 0) / last.words.length; }
     else lines.push({ cy, words: [w] });
   }
   const pad = 0.003;
@@ -84,7 +88,13 @@ export function groupWordsIntoLines(words: OcrWord[], width: number, height: num
     const left = Math.max(0, x0 / width - pad), top = Math.max(0, y0 / height - pad);
     const right = Math.min(1, x1 / width + pad), bottom = Math.min(1, y1 / height + pad);
     const r = (n: number) => Math.round(n * 10000) / 10000;
-    return { text: ws.map((w) => w.text).join(' '), box: { x: r(left), y: r(top), width: r(right - left), height: r(bottom - top) } };
+    const tilted = ws.every((w) => w.fx0 !== undefined);
+    const flat = tilted ? {
+      x: r(Math.min(...ws.map((w) => w.fx0 as number)) / width), y: r(Math.min(...ws.map((w) => w.fy0 as number)) / height),
+      width: r((Math.max(...ws.map((w) => w.fx1 as number)) - Math.min(...ws.map((w) => w.fx0 as number))) / width),
+      height: r((Math.max(...ws.map((w) => w.fy1 as number)) - Math.min(...ws.map((w) => w.fy0 as number))) / height),
+    } : undefined;
+    return { text: ws.map((w) => w.text).join(' '), box: { x: r(left), y: r(top), width: r(right - left), height: r(bottom - top) }, ...(flat ? { flat } : {}), words: ws };
   });
 }
 
@@ -121,7 +131,10 @@ function bestSubstringDistance(hay: string, needle: string): number {
 const carriesBounds = (row: RowKey, text: string) =>
   (row.ref_low === null || hasNumberLoose(text, row.ref_low)) && (row.ref_high === null || hasNumberLoose(text, row.ref_high));
 
-const centreY = (l: OcrLine) => l.box.y + l.box.height / 2;
+/** Layout box: the straightened one if the photo was tilted. */
+const G = (l: OcrLine): ImageSourceBox => l.flat ?? l.box;
+const centreX = (l: OcrLine) => G(l).x + G(l).width / 2;
+const centreY = (l: OcrLine) => G(l).y + G(l).height / 2;
 const unionBox = (ls: OcrLine[]): ImageSourceBox => {
   const x0 = Math.min(...ls.map((l) => l.box.x)), y0 = Math.min(...ls.map((l) => l.box.y));
   const x1 = Math.max(...ls.map((l) => l.box.x + l.box.width)), y1 = Math.max(...ls.map((l) => l.box.y + l.box.height));
@@ -130,6 +143,18 @@ const unionBox = (ls: OcrLine[]): ImageSourceBox => {
 };
 /** A box that holds only a result: the number, maybe a flag letter or a short unit ("24 L", "5.3", "4.53 mg/dL"). Never a name. */
 const isValueOnly = (l: OcrLine, value: number) => hasNumberLoose(l.text, value) && l.text.replace(/[^A-Za-z]/g, '').length <= 6;
+
+/**
+ * A reference line that also carries the result ("Reference Range: 40-190 mcg/dL 24 L"): happens when OCR merges the
+ * value box with the range line under a tilted card. The value must be the last number on the line and must not just
+ * be one of the range bounds (a value of 190 against "40-190" proves nothing).
+ */
+export function valueEndsRangeLine(text: string, row: RowKey): boolean {
+  const nums = (text.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+  if (nums.length < 2 || nums[nums.length - 1] !== row.value) return false;
+  const asBound = [row.ref_low, row.ref_high].filter((b) => b === row.value).length;
+  return nums.filter((n) => n === row.value).length > asBound;
+}
 
 /**
  * The box that shows this row, or null. First the test name must identify exactly one line (exactly, or within a
@@ -151,16 +176,17 @@ export function matchRowToLine(row: RowKey, lines: OcrLine[]): ImageSourceBox | 
   for (const c of named) {
     const norm = (t: string) => t.replace(/[–—−]/g, '-');
     const below = lines
-      .filter((l) => l !== c && l.box.y >= c.box.y + c.box.height * 0.5 && centreY(l) - centreY(c) <= c.box.height * 2.4)
-      .sort((x, y) => x.box.y - y.box.y)
+      .filter((l) => l !== c && G(l).y >= G(c).y + G(c).height * 0.5 && centreY(l) - centreY(c) <= G(c).height * 2.4)
+      .sort((x, y) => G(x).y - G(y).y)
       .find((l) => /^ref/i.test(l.text.trim()) || [row.ref_low, row.ref_high].some((v) => v !== null && hasNumberLoose(norm(l.text), v)));
     const extra = below && !alnum(below.text).includes(name) ? [below] : [];
     if (hasNumberLoose(norm(c.text), row.value)) { confirmed.push({ line: c, box: unionBox([c, ...extra]), text: norm(`${c.text} ${extra[0]?.text ?? ''}`) }); continue; }
+    if (extra[0] && valueEndsRangeLine(norm(extra[0].text), row)) { confirmed.push({ line: c, box: unionBox([c, extra[0]]), text: norm(`${c.text} ${extra[0].text}`) }); continue; }
     // A side box counts only if (a) the name line has no result of its own (a number that is not part of the test
-    // name), (b) the box starts to the right of the name, and (c) no other text sits between them in that band.
+    // name), (b) the box lies to the right of the name (centre to centre; OCR may merge the box with its unit, which pulls its left edge past the name's), and (c) no other text sits between them in that band.
     const own = (c.text.match(/\d+(?:\.\d+)?/g) ?? []).filter((n) => !row.test_name.includes(n));
-    const inBand = (l: OcrLine) => l !== c && Math.abs(centreY(l) - centreY(c)) <= 0.75 * Math.max(l.box.height, c.box.height);
-    const side = own.length > 0 ? [] : lines.filter((l) => inBand(l) && isValueOnly(l, row.value) && l.box.x > c.box.x && !lines.some((o) => inBand(o) && o !== l && !isValueOnly(o, row.value) && o.box.x > c.box.x && o.box.x < l.box.x));
+    const inBand = (l: OcrLine) => l !== c && Math.abs(centreY(l) - centreY(c)) <= 0.75 * Math.max(G(l).height, G(c).height);
+    const side = own.length > 0 ? [] : lines.filter((l) => inBand(l) && isValueOnly(l, row.value) && centreX(l) > centreX(c) && !lines.some((o) => inBand(o) && o !== l && !isValueOnly(o, row.value) && centreX(o) > centreX(c) && centreX(o) < centreX(l)));
     if (side.length === 1) confirmed.push({ line: c, box: unionBox([c, side[0] as OcrLine, ...extra]), text: norm(`${c.text} ${side[0]?.text} ${extra[0]?.text ?? ''}`) });
   }
   if (confirmed.length === 1) return (confirmed[0] as (typeof confirmed)[number]).box;
@@ -199,20 +225,52 @@ async function decode(buffer: Buffer): Promise<{ data: Buffer; width: number; he
 async function recognizeWords(buffer: Buffer): Promise<OcrWord[]> {
   const [ocr, image] = await Promise.all([engine(), decode(buffer)]);
   const { texts } = await ocr.detect(image);
-  return texts.filter((t) => t.text.trim() && (t.mean ?? 1) >= MIN_CONFIDENCE).map((t) => {
+  const kept = texts.filter((t) => t.text.trim() && (t.mean ?? 1) >= MIN_CONFIDENCE && t.box.length >= 4);
+  const skew = pageSkew(kept.map((t) => t.box));
+  const cx = image.width / 2, cy = image.height / 2, cos = Math.cos(skew), sin = Math.sin(skew);
+  return kept.map((t) => {
     const xs = t.box.map((pt) => pt[0] as number), ys = t.box.map((pt) => pt[1] as number);
-    return { text: t.text.trim(), x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+    const word: OcrWord = { text: t.text.trim(), x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys), quad: t.box.map((pt) => [pt[0] as number, pt[1] as number]) };
+    if (skew !== 0) {
+      // Rotate the text box's corners back by the page's tilt, so "same row" means same row on the paper.
+      const fx = t.box.map((pt) => cx + ((pt[0] as number) - cx) * cos + ((pt[1] as number) - cy) * sin);
+      const fy = t.box.map((pt) => cy - ((pt[0] as number) - cx) * sin + ((pt[1] as number) - cy) * cos);
+      Object.assign(word, { fx0: Math.min(...fx), fx1: Math.max(...fx), fy0: Math.min(...fy), fy1: Math.max(...fy) });
+    }
+    return word;
   });
 }
 
 /**
- * Lines of text on the photo with their boxes, or [] when the photo cannot be located safely. Never throws:
- * a photo without citations is still a fully readable report.
+ * How far the page is tilted, in radians (positive = clockwise), from the baselines of the long text boxes. The median
+ * of many boxes ignores a few odd ones. Under 0.4 degrees is treated as straight; over 30 is not a tilt (a sideways
+ * page), so layout is left alone.
  */
-export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
+export function pageSkew(boxes: number[][][]): number {
+  const angles = boxes
+    .map((b) => {
+      const dx = (b[1] as number[])[0] as number - ((b[0] as number[])[0] as number), dy = (b[1] as number[])[1] as number - ((b[0] as number[])[1] as number);
+      const h = Math.hypot((b[3] as number[])[0] as number - ((b[0] as number[])[0] as number), (b[3] as number[])[1] as number - ((b[0] as number[])[1] as number));
+      return Math.hypot(dx, dy) >= 4 * h && h > 0 ? Math.atan2(dy, dx) : null;
+    })
+    .filter((a): a is number => a !== null)
+    .sort((a, b) => a - b);
+  if (angles.length < 3) return 0;
+  const median = angles[Math.floor(angles.length / 2)] as number;
+  const deg = Math.abs(median) * 180 / Math.PI;
+  return deg < 0.4 || deg > 30 ? 0 : median;
+}
+
+/** Everything the engine read: its text boxes, the lines they form, and the image size. */
+export interface OcrScan { words: OcrWord[]; lines: OcrLine[]; width: number; height: number }
+
+/**
+ * Reads a photo. Returns null when the engine could not run (so callers can tell "failed" from "no text"), never
+ * throws. The photo must be upright (orientation 1): the engine does not apply stored rotation.
+ */
+export async function scanImage(buffer: Buffer): Promise<OcrScan | null> {
   const info = imageInfo(buffer);
-  // Stored rotation is not applied by the OCR engine, so boxes would not line up with what the browser shows.
-  if (!info || info.orientation !== 1 || info.width < 50 || info.height < 50) return [];
+  if (!info || info.orientation !== 1 || info.width < 50 || info.height < 50) return null;
   const job = (g.__labOcrChain ?? Promise.resolve()).then(async () => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -220,13 +278,21 @@ export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
         recognizeWords(buffer),
         new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('OCR timed out')), OCR_TIMEOUT_MS); }),
       ]);
-      return groupWordsIntoLines(words, info.width, info.height);
+      return { words, lines: groupWordsIntoLines(words, info.width, info.height), width: info.width, height: info.height } as OcrScan;
     } catch (e) {
       console.error('OCR failed:', e instanceof Error ? e.message : e);
       g.__labOcrEngine = undefined; // a broken engine must not poison later uploads
-      return [] as OcrLine[];
+      return null;
     } finally { if (timer) clearTimeout(timer); }
   });
   g.__labOcrChain = job.catch(() => undefined);
   return job;
+}
+
+/**
+ * Lines of text on the photo with their boxes, or [] when the photo cannot be located safely. Never throws:
+ * a photo without citations is still a fully readable report.
+ */
+export async function ocrLines(buffer: Buffer): Promise<OcrLine[]> {
+  return (await scanImage(buffer))?.lines ?? [];
 }

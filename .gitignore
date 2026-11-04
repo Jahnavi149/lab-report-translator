@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-prod/
 .test-build/
 .vercel/
 .env
@@ -8,9 +9,11 @@ node_modules/
 *.log
 *.tsbuildinfo
 .DS_Store
-.next-prod/
-# Local citation-review photos, caches and sheets (photos may be real health data)
+
+# Local evaluation work: your own photos may be real health data, so they never leave this machine
 eval/photos/*
 !eval/photos/.gitkeep
 eval/.cache/
 eval/report/
+eval/phone-sim/
+eval/redacted/

@@ -22,6 +22,10 @@ export interface Ui {
   doctorSheetBtn: string; handoutBtn: string; listenBtn: string; stopListenBtn: string; newReportBtn: string;
   chooseFileBtn: string;
   shareBtn: string; whatsappBtn: string; copiedBtn: string; clearBtn: string; backBtn: string; printBtn: string; handoutTitle: string;
+  // Voice questions (the mic button)
+  micBtn: string; micListening: string; micThinking: string; micSpeaking: string;
+  micUnsupported: string; micLanguage: string; micNoKey: string; micDenied: string; micNoSpeech: string; micError: string;
+  askedDoctorNote: string; youAskedLabel: string; answerLabel: string; micHint: string;
 }
 
 const TE: Pack = {
@@ -43,6 +47,20 @@ const TE: Pack = {
     doctorSheetBtn: 'డాక్టర్ షీట్', handoutBtn: 'పెద్ద అక్షరాల ప్రింట్', listenBtn: 'సారాంశం వినండి', stopListenBtn: 'వినడం ఆపండి', newReportBtn: 'కొత్త రిపోర్ట్',
     chooseFileBtn: 'మీ రిపోర్ట్‌ను ఎంచుకోండి',
     shareBtn: 'షేర్ / కాపీ చేయండి', whatsappBtn: 'WhatsAppలో పంపండి', copiedBtn: 'కాపీ అయింది!', clearBtn: 'రిపోర్ట్ తొలగించండి', backBtn: 'ఫలితాలకు తిరిగి', printBtn: 'ప్రింట్ చేయండి', handoutTitle: 'మీ ఫలితాలు, పెద్ద అక్షరాలలో',
+    micBtn: 'వాయిస్‌తో అడగండి',
+    micListening: 'వింటున్నాను… ఆపడానికి నొక్కండి',
+    micThinking: 'ఆలోచిస్తున్నాను…',
+    micSpeaking: 'చెబుతున్నాను… ఆపడానికి నొక్కండి',
+    micUnsupported: 'వాయిస్ ప్రశ్నలకు స్పీచ్ రికగ్నిషన్ ఉన్న బ్రౌజర్ (Chrome, Edge లేదా Safari) కావాలి. మిగతావన్నీ యథావిధిగా పని చేస్తాయి.',
+    micLanguage: 'వాయిస్ ప్రశ్నలు ఇంగ్లీష్, తెలుగు, హిందీ, స్పానిష్‌లో పని చేస్తాయి. వాయిస్‌తో అడగడానికి వీటిలో ఒకటి ఎంచుకోండి.',
+    micNoKey: 'వాయిస్ ప్రశ్నలు ప్రస్తుతం అందుబాటులో లేవు. మిగతావన్నీ యథావిధిగా పని చేస్తాయి.',
+    micDenied: 'మైక్రోఫోన్ బ్లాక్ అయి ఉంది లేదా లేదు, కాబట్టి వాయిస్ ప్రశ్నలు ఆఫ్‌లో ఉన్నాయి. వాడటానికి బ్రౌజర్ సెట్టింగ్స్‌లో మైక్రోఫోన్‌ను అనుమతించండి.',
+    micNoSpeech: 'నాకు ఏమీ వినిపించలేదు. మైక్ నొక్కి మళ్లీ అడగండి.',
+    micError: 'ఈసారి వాయిస్ ప్రశ్న పని చేయలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.',
+    askedDoctorNote: 'ఇది మీ డాక్టర్‌ను అడగాల్సిన ప్రశ్న, అందుకే నేను సమాధానం ఇవ్వకుండా మిమ్మల్ని డాక్టర్ దగ్గరకు పంపాను.',
+    youAskedLabel: 'మీరు అడిగినది',
+    answerLabel: 'సమాధానం',
+    micHint: 'ఇలా అడగండి: “నా హిమోగ్లోబిన్ అంటే ఏమిటి?” · “సారాంశం చెప్పు” · “డాక్టర్ షీట్ చూపించు”',
   },
 };
 
@@ -65,6 +83,20 @@ const HI: Pack = {
     doctorSheetBtn: 'डॉक्टर शीट', handoutBtn: 'बड़े अक्षरों में प्रिंट', listenBtn: 'सारांश सुनें', stopListenBtn: 'सुनना बंद करें', newReportBtn: 'नई रिपोर्ट',
     chooseFileBtn: 'अपनी रिपोर्ट चुनें',
     shareBtn: 'साझा करें / कॉपी करें', whatsappBtn: 'WhatsApp पर भेजें', copiedBtn: 'कॉपी हो गया!', clearBtn: 'रिपोर्ट हटाएँ', backBtn: 'परिणामों पर वापस', printBtn: 'प्रिंट करें', handoutTitle: 'आपके परिणाम, बड़े अक्षरों में',
+    micBtn: 'बोलकर पूछें',
+    micListening: 'सुन रहा हूँ… रोकने के लिए दबाएँ',
+    micThinking: 'सोच रहा हूँ…',
+    micSpeaking: 'बोल रहा हूँ… रोकने के लिए दबाएँ',
+    micUnsupported: 'आवाज़ से पूछने के लिए ऐसा ब्राउज़र चाहिए जिसमें स्पीच रिकग्निशन हो, जैसे Chrome, Edge या Safari। बाकी सब कुछ पहले की तरह चलता है।',
+    micLanguage: 'आवाज़ से सवाल अंग्रेज़ी, तेलुगु, हिंदी और स्पेनिश में काम करते हैं। बोलकर पूछने के लिए इनमें से कोई एक भाषा चुनें।',
+    micNoKey: 'आवाज़ से सवाल अभी उपलब्ध नहीं हैं। बाकी सब कुछ पहले की तरह चलता है।',
+    micDenied: 'माइक्रोफ़ोन बंद है या मौजूद नहीं है, इसलिए आवाज़ से सवाल बंद हैं। इस्तेमाल के लिए ब्राउज़र सेटिंग में माइक्रोफ़ोन की अनुमति दें।',
+    micNoSpeech: 'मुझे कुछ सुनाई नहीं दिया। माइक दबाकर फिर से पूछें।',
+    micError: 'इस बार आवाज़ वाला सवाल काम नहीं किया। कृपया फिर से कोशिश करें।',
+    askedDoctorNote: 'यह आपके डॉक्टर से पूछने वाला सवाल है, इसलिए मैंने जवाब देने के बजाय आपको डॉक्टर के पास भेजा।',
+    youAskedLabel: 'आपने पूछा',
+    answerLabel: 'जवाब',
+    micHint: 'ऐसे पूछें: “मेरा हीमोग्लोबिन क्या है?” · “सारांश बताओ” · “डॉक्टर शीट दिखाओ”',
   },
 };
 
@@ -87,6 +119,20 @@ const ES: Pack = {
     doctorSheetBtn: 'Hoja para el médico', handoutBtn: 'Hoja en letra grande', listenBtn: 'Escuchar el resumen', stopListenBtn: 'Dejar de escuchar', newReportBtn: 'Nuevo informe',
     chooseFileBtn: 'Elegir su informe',
     shareBtn: 'Compartir / copiar', whatsappBtn: 'Enviar por WhatsApp', copiedBtn: '¡Copiado!', clearBtn: 'Borrar informe', backBtn: 'Volver a los resultados', printBtn: 'Imprimir', handoutTitle: 'Sus resultados, en letra grande',
+    micBtn: 'Preguntar por voz',
+    micListening: 'Escuchando… toque para parar',
+    micThinking: 'Pensando…',
+    micSpeaking: 'Hablando… toque para parar',
+    micUnsupported: 'Las preguntas por voz necesitan un navegador con reconocimiento de voz, como Chrome, Edge o Safari. Todo lo demás sigue funcionando.',
+    micLanguage: 'Las preguntas por voz funcionan en inglés, telugu, hindi y español. Cambie a uno de esos idiomas para preguntar por voz.',
+    micNoKey: 'Las preguntas por voz no están disponibles ahora. Todo lo demás sigue funcionando.',
+    micDenied: 'El micrófono está bloqueado o no existe, así que las preguntas por voz están desactivadas. Permita el micrófono en la configuración del navegador para usarlas.',
+    micNoSpeech: 'No oí nada. Toque el micrófono y pregunte de nuevo.',
+    micError: 'La pregunta por voz no funcionó esta vez. Inténtelo de nuevo.',
+    askedDoctorNote: 'Esta es una pregunta para su médico, así que lo remití a él en lugar de responder.',
+    youAskedLabel: 'Usted preguntó',
+    answerLabel: 'Respuesta',
+    micHint: 'Pregunte: «¿Qué significa mi hemoglobina?» · «Lee el resumen» · «Muestra la hoja para el médico»',
   },
 };
 
@@ -107,6 +153,20 @@ const EN_UI: Ui = {
   doctorSheetBtn: 'Doctor sheet', handoutBtn: 'Large-print handout', listenBtn: 'Listen to summary', stopListenBtn: 'Stop listening', newReportBtn: 'New report',
   chooseFileBtn: 'Choose your report',
   shareBtn: 'Share / copy summary', whatsappBtn: 'Send on WhatsApp', copiedBtn: 'Copied!', clearBtn: 'Clear report', backBtn: 'Back to results', printBtn: 'Print', handoutTitle: 'Your results, in large print',
+  micBtn: 'Ask by voice',
+  micListening: 'Listening… tap to stop',
+  micThinking: 'Thinking…',
+  micSpeaking: 'Speaking… tap to stop',
+  micUnsupported: 'Voice questions need a browser with speech recognition, such as Chrome, Edge or Safari. Everything else still works.',
+  micLanguage: 'Voice questions work in English, Telugu, Hindi and Spanish. Switch to one of them to ask by voice.',
+  micNoKey: 'Voice questions are not available right now. Everything else still works.',
+  micDenied: 'The microphone is blocked or missing, so voice questions are off. Allow the microphone in your browser settings to use them.',
+  micNoSpeech: 'I did not hear anything. Tap the mic and ask again.',
+  micError: 'The voice question did not work this time. Please try again.',
+  askedDoctorNote: 'This is a question for your doctor, so I pointed you to them instead of answering.',
+  youAskedLabel: 'You asked',
+  answerLabel: 'Answer',
+  micHint: 'Try: “What does my hemoglobin mean?” · “Read my summary” · “Take me to the doctor sheet”',
 };
 
 const PACKS: Partial<Record<Language, Pack>> = { te: TE, hi: HI, es: ES };

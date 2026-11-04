@@ -26,6 +26,7 @@ export async function enhanceWithMuse(rows: LabRow[], opts: { check?: boolean } 
   const baseQuestions = questionsFor(rows);
   const safe = toMuseSafe(rows);
   const everyRowSafe = safe.length === rows.length;
+  // Each result line is checked by the identifier patterns and the unexplained-word rule (toCheckItems) before it can be sent.
   const checkItems = opts.check ? toCheckItems(rows) : [];
   const skip = <T>(v: T) => Promise.resolve(v);
   const [explain, summary, questions, check] = await Promise.allSettled([

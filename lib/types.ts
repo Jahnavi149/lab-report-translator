@@ -66,14 +66,35 @@ export type MuseSafeRow = Pick<LabRow, 'test_name' | 'value' | 'unit' | 'ref_low
 /** One report line with identifying lines and patterns already removed. */
 export type MuseSafeLine = string & { readonly [museSafe]: true };
 
+/**
+ * A photo that went through lib/photo.ts: identifiers found by the patterns are painted out of the
+ * pixels, and a second read of the painted image found none left. The vision call accepts nothing else, so an
+ * original upload cannot be sent by mistake. Only lib/photo.ts can create one.
+ */
+export interface RedactedPhoto {
+  readonly [museSafe]: true;
+  readonly buffer: Buffer;
+  readonly mime: 'image/jpeg';
+  /** How many text boxes were painted out. */
+  readonly regions: number;
+  /** What kinds of identifier those were (never the values). */
+  readonly kinds: string[];
+  /** A small copy of exactly what was sent, for the "What the AI sees" panel. */
+  readonly preview: string;
+}
+
 /** Exactly what the AI was given for a report, shown to the user under "What the AI sees". */
 export interface AiInputDisclosure {
   /** The result fields sent to Muse (name, value, unit, range, flag). */
   rows: Pick<LabRow, 'test_name' | 'value' | 'unit' | 'ref_low' | 'ref_high' | 'flag'>[];
   /** PDF only: the redacted result lines sent for the second-pass check. */
   source_lines: string[];
-  /** Photo uploads: the picture itself is sent to be read. It cannot be redacted. */
+  /** Photo uploads: a picture is sent to be read, after identifiers were painted out of it (see photo_preview). */
   photo: boolean;
+  /** Photo uploads: the exact image sent, as a small data URL. */
+  photo_preview?: string;
+  /** Photo uploads: how many regions were painted out. */
+  photo_regions?: number;
   /** Result lines kept out of the second check because they held text that could not be explained as a result. */
   lines_withheld: number;
   /** How many identifier lines or patterns were found in the report text and kept away from the AI. */
@@ -87,4 +108,28 @@ export interface TranslatedReport {
   summary: (string | null)[];
   questions: (string | null)[];
   explanations: Record<string, string>;
+}
+
+/** One spoken question and its answer, kept in the browser for the "What the AI sees" panel (counts and text, never audio). */
+export interface VoiceExchange {
+  question: string;
+  answer: string;
+  intent: string;
+  redirected: boolean;
+  /** The question text reached Muse (only explain-result and explain-question do this). */
+  sent_to_ai: boolean;
+  /** Exactly what was sent, after identifiers were removed. */
+  question_sent?: string;
+}
+
+/** One spoken question and its answer, kept in the browser for the "What the AI sees" panel (counts and text, never audio). */
+export interface VoiceExchange {
+  question: string;
+  answer: string;
+  intent: string;
+  redirected: boolean;
+  /** The question text reached Muse (only explain-result and explain-question do this). */
+  sent_to_ai: boolean;
+  /** Exactly what was sent, after identifiers were removed. */
+  question_sent?: string;
 }

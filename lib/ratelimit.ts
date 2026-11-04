@@ -3,7 +3,7 @@
 // casual abuse of a public demo URL. Put a real limiter (e.g. platform WAF) in front for production.
 const hits = new Map<string, number[]>();
 
-export function clientIp(req: Request): string {
+function clientIp(req: Request): string {
   const fwd = req.headers.get('x-forwarded-for');
   return (fwd?.split(',')[0] ?? req.headers.get('x-real-ip') ?? 'local').trim();
 }

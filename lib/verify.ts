@@ -15,7 +15,7 @@ export function hasNumberToken(text: string, n: number): boolean {
   return [...forms].some((f) => new RegExp(`(?<![\\d.,])${esc(f)}(?![\\d]|[.,]\\d)`).test(text));
 }
 
-export function verifyRow(row: LabRow, normalizedSource: string): string | null {
+function verifyRow(row: LabRow, normalizedSource: string): string | null {
   const line = row.source_text;
   if (!normalizedSource.includes(line)) return 'its line was not found in the document text';
   if (!hasNumberToken(line, row.value)) return 'its value was not found on its line';

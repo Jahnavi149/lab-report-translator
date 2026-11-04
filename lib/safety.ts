@@ -12,14 +12,14 @@ export function numbersIn(text: string): string[] {
   return (text.match(/\d+(?:\.\d+)?/g) ?? []).map((n) => String(Number(n)));
 }
 
-export function allowedNumbers(row: Pick<LabRow, 'value' | 'ref_low' | 'ref_high'>): Set<string> {
+function allowedNumbers(row: Pick<LabRow, 'value' | 'ref_low' | 'ref_high'>): Set<string> {
   const s = new Set<string>([String(row.value)]);
   if (row.ref_low !== null) s.add(String(row.ref_low));
   if (row.ref_high !== null) s.add(String(row.ref_high));
   return s;
 }
 
-export function allowedNumbersForRows(rows: Pick<LabRow, 'value' | 'ref_low' | 'ref_high'>[]): Set<string> {
+function allowedNumbersForRows(rows: Pick<LabRow, 'value' | 'ref_low' | 'ref_high'>[]): Set<string> {
   const s = new Set<string>();
   for (const r of rows) for (const n of allowedNumbers(r)) s.add(n);
   return s;
@@ -34,10 +34,10 @@ const TREATMENT = /treat|therap|cure|\bdose|dosage|\bmg\b(?!\/)|prescri|medicat|
 // Statements may not interpret or speculate. (Questions are allowed to ask about causes.)
 const INTERPRETATION = /\bshould\b|\bmust\b|\bneed to\b|\bhave to\b|suggest|indicat|impl(y|ies)|point(s|ing)? to|sign(s)? of|symptom|\brisk|likely|probabl|possibl|\bmay\b|\bmight\b|\bcould mean\b|\bmeans? that\b|due to|because of|caused by|result(s)? (from|of)|\bhealthy\b|unhealthy|worr|concern|serious|danger|urgent|emergency|good news|bad news|\bfine\b|\bgreat\b|excellent|\bpoor\b|\bnormal for you\b|you (have|are|may|might|will|should|need)|your (body|health)/i;
 
-export function containsDiagnosisOrTreatment(text: string): boolean {
+function containsDiagnosisOrTreatment(text: string): boolean {
   return DIAGNOSIS.test(text) || TREATMENT.test(text);
 }
-export function containsInterpretation(text: string): boolean {
+function containsInterpretation(text: string): boolean {
   return containsDiagnosisOrTreatment(text) || INTERPRETATION.test(text);
 }
 
@@ -120,6 +120,52 @@ export function translationIsSafe(source: unknown, translated: unknown): transla
   if (ratio < 0.2 || ratio > 5) return false;
   if (!sameMultiset(numbersIn(source), numbersIn(t))) return false;
   return !containsInterpretation(t);
+}
+
+// --- Voice answers ---------------------------------------------------------------------------------
+// Every sentence the voice assistant speaks or shows passes one of these first. Failing means: discard, say the redirect line.
+// Timing and urgency advice is added on top of the interpretation filter ("see a doctor soon", "wait a week").
+const VOICE_TIMING = /immediately|right away|as soon as|asap|\bsoon\b|\bwait\b|\bdelay|hurry|\bpromptly\b|\btoday\b|tomorrow|this week|\bnext (week|month|visit)\b|\brecommend|\badvi[sc]e\b|\byou can\b|\bi (think|believe|suggest)\b/i;
+const sentencesIn = (t: string) => (t.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) ?? []).map((x) => x.trim()).filter(Boolean);
+
+/** explain-result: ONE sentence with the test name, value, unit and printed range, and the direction the code computed. */
+export function voiceExplanationIsSafe(answer: unknown, row: RowFields & { unit: string }): answer is string {
+  if (!explanationIsSafe(answer, row)) return false;
+  const text = (answer as string).trim();
+  if (sentencesIn(text).length !== 1) return false;
+  if (VOICE_TIMING.test(stripNames(text, [row]))) return false;
+  if (row.unit && !text.toLowerCase().includes(row.unit.toLowerCase())) return false;
+  // The printed range is part of the answer: each bound that is printed must appear.
+  const nums = numbersIn(text);
+  return [row.ref_low, row.ref_high].every((b) => b === null || nums.includes(String(b)));
+}
+
+/** explain-question: the doctor question said again in simpler words. Still only a question; it never answers it. */
+export function voiceRephraseIsSafe(answer: unknown, original: string, rows: RowFields[]): answer is string {
+  if (typeof answer !== 'string') return false;
+  const q = answer.trim();
+  if (q.length < 10 || q.length > 300 || !q.endsWith('?')) return false;
+  const sentences = sentencesIn(q);
+  if (sentences.length === 0 || sentences.length > 2 || !sentences.every((x) => x.endsWith('?'))) return false;
+  const body = stripNames(q, rows);
+  const allowed = new Set(numbersIn(original));
+  if (!numbersIn(body).every((n) => allowed.has(n))) return false;
+  return !containsDiagnosisOrTreatment(body) && !VOICE_TIMING.test(body)
+    && !/\brisk|symptom|danger|serious|urgent|emergency|you (have|are|may|might)|\blikely\b|\bprobabl/i.test(body);
+}
+
+/** A doctor question already on the report (written by code or by a validated Muse call): re-checked before it is rephrased. */
+export function voiceSourceQuestionIsSafe(question: unknown, rows: RowFields[]): question is string {
+  if (typeof question !== 'string' || question.trim().length < 10 || question.length > 400) return false;
+  const body = stripNames(question, rows);
+  return numbersIn(body).every((n) => allowedNumbersForRows(rows).has(n)) && !containsDiagnosisOrTreatment(body);
+}
+
+/** Text the code itself writes for a voice reply (confirmations, "which one?"): numbers only from the report, no advice. */
+export function voiceFixedTextIsSafe(text: unknown, rows: RowFields[]): text is string {
+  if (typeof text !== 'string' || text.trim().length === 0 || text.length > 600) return false;
+  const body = stripNames(text, rows);
+  return numbersIn(body).every((n) => allowedNumbersForRows(rows).has(n)) && !containsInterpretation(body) && !VOICE_TIMING.test(body);
 }
 
 // --- Privacy ---------------------------------------------------------------------------------------
