@@ -1,0 +1,64 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> >> >>
+endobj
+4 0 obj
+<< /Length 1730 >>
+stream
+BT /F2 15 Tf 50 732 Td (EXEMPLE FICTIF - Laboratoire Centre-Ville - données inventées) Tj ET
+BT /F1 11 Tf 50 702 Td (Nom du patient : Camille Exemple) Tj ET
+BT /F1 11 Tf 50 686 Td (Date de naissance : 12/05/1979      Téléphone : 01 55 01 23 45) Tj ET
+BT /F1 11 Tf 50 670 Td (Prélèvement : 18/03/2026) Tj ET
+BT /F2 11 Tf 50 632 Td (Analyse) Tj ET
+BT /F2 11 Tf 260 632 Td (Résultat) Tj ET
+BT /F2 11 Tf 320 632 Td (Unité) Tj ET
+BT /F2 11 Tf 400 632 Td (Valeurs de référence) Tj ET
+BT /F1 11 Tf 50 606 Td (Hémoglobine) Tj ET
+BT /F1 11 Tf 260 606 Td (11,2) Tj ET
+BT /F1 11 Tf 320 606 Td (g/dL) Tj ET
+BT /F1 11 Tf 400 606 Td (12,0 - 15,5) Tj ET
+BT /F1 11 Tf 50 584 Td (Leucocytes) Tj ET
+BT /F1 11 Tf 260 584 Td (6,5) Tj ET
+BT /F1 11 Tf 320 584 Td (G/L) Tj ET
+BT /F1 11 Tf 400 584 Td (4,0 - 10,0) Tj ET
+BT /F1 11 Tf 50 562 Td (Glycémie à jeun) Tj ET
+BT /F1 11 Tf 260 562 Td (1,26) Tj ET
+BT /F1 11 Tf 320 562 Td (g/L) Tj ET
+BT /F1 11 Tf 400 562 Td (0,70 - 1,10) Tj ET
+BT /F1 11 Tf 50 540 Td (Créatinine) Tj ET
+BT /F1 11 Tf 260 540 Td (1,4) Tj ET
+BT /F1 11 Tf 320 540 Td (mg/dL) Tj ET
+BT /F1 11 Tf 400 540 Td (0,6 - 1,2) Tj ET
+BT /F1 11 Tf 50 518 Td (Cholestérol total) Tj ET
+BT /F1 11 Tf 260 518 Td (2,30) Tj ET
+BT /F1 11 Tf 320 518 Td (g/L) Tj ET
+BT /F1 11 Tf 400 518 Td (inférieur à 2,00) Tj ET
+BT /F1 11 Tf 50 496 Td (Triglycérides) Tj ET
+BT /F1 11 Tf 260 496 Td (1.230) Tj ET
+BT /F1 11 Tf 320 496 Td (mg/dL) Tj ET
+BT /F1 11 Tf 400 496 Td (inférieur à 150) Tj ET
+BT /F1 11 Tf 50 474 Td (Ferritine) Tj ET
+BT /F1 11 Tf 260 474 Td (22) Tj ET
+BT /F1 11 Tf 320 474 Td (ng/mL) Tj ET
+BT /F1 11 Tf 400 474 Td (15 - 150) Tj ET
+BT /F1 9 Tf 50 372 Td (Exemple fictif pour Lab Report Translator. Information seulement, jamais un diagnostic.) Tj ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000408 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+2190
+%%EOF

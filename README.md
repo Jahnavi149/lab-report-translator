@@ -68,9 +68,11 @@ npm run dev                                 # http://localhost:3000
 
 Or skip setup and use the [live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/). Node 18.17+. PDF and photo reading use your Meta key; without one the app shows the example report only.
 
+**Sample files to upload** (all invented, no real patient): [`samples/`](samples/README.md) has a two-page report, a French report with decimal commas, flag-only results, a phone-style photo, a scan and a non-lab PDF, each with what it shows and what to expect.
+
 ## Tests
 
-`npm test` runs **714 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
+`npm test` runs **726 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
 
 ## Documentation
 
