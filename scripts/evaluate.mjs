@@ -14,7 +14,7 @@ for (const f of readdirSync('lib').filter((n) => n.endsWith('.ts'))) {
 }
 const require = createRequire(import.meta.url);
 const load = (n) => require(join(process.cwd(), OUT, `${n}.js`));
-const { flagFor, questionsFor, summaryFor, plainEnglishFor, describeRange, formatRangeCompact } = load('flags');
+const { flagFor, flagFromEvidence, questionsFor, summaryFor, plainEnglishFor, describeRange, formatRangeCompact } = load('flags');
 const { parseLabText, parseLabTextDetailed } = load('parse');
 const { verifyRows, hasNumberToken } = load('verify');
 const safety = load('safety');
@@ -43,6 +43,9 @@ for (const [v, lo, hi, want] of [[178, null, 200, 'Normal'], [230, null, 200, 'H
 eq('describeRange between', describeRange(12, 15.5, 'g/dL'), '12 to 15.5 g/dL');
 eq('describeRange upper only', describeRange(null, 200, 'mg/dL'), 'under 200 mg/dL');
 eq('describeRange lower only', describeRange(40, null, 'mg/dL'), 'over 40 mg/dL');
+eq('a numeric range wins over a contradictory report verdict', flagFromEvidence(104, null, 100, 'Normal'), { flag: 'High', source: 'range' });
+eq('an explicit report verdict is fallback evidence when no range is printed', flagFromEvidence(null, null, null, 'High'), { flag: 'High', source: 'report_marker' });
+eq('a report verdict is not used when a range exists but the numeric value is absent', flagFromEvidence(null, 0, 5, 'High'), { flag: 'Unknown', source: 'none' });
 eq('describeRange none', describeRange(null, null, 'mg/dL'), null);
 eq('doctor-sheet range, upper only (was " - 200")', formatRangeCompact(null, 200, 'mg/dL'), '< 200 mg/dL');
 eq('doctor-sheet range, lower only (was "40 - ")', formatRangeCompact(40, null, 'mg/dL'), '> 40 mg/dL');
@@ -157,6 +160,9 @@ const bad = [
 for (const [r, text, why] of bad) check(`rejects (${why})`, !safety.explanationIsSafe(text, r), String(text).slice(0, 50));
 const markerRow = row({ test_name: 'Ferritin', value: 22, unit: 'ng/mL', ref_low: null, ref_high: null, flag: 'High', flag_source: 'report_marker' });
 check('marker-only row: accepts a sentence that says the report marks it High', safety.explanationIsSafe('Ferritin was 22 ng/mL. The report itself marks it High, but it prints no range.', markerRow));
+const verdictOnlyRow = row({ test_name: 'Lipoprotein (a)', value: null, unit: '', ref_low: null, ref_high: null, flag: 'High', flag_source: 'report_marker' });
+check('verdict-only row: accepts no numeric value plus the report marker', safety.explanationIsSafe('Lipoprotein (a) did not show a numeric value. The report marks it High, and no range was printed.', verdictOnlyRow));
+check('verdict-only row: rejects an invented numeric value', !safety.explanationIsSafe('Lipoprotein (a) was 92 and the report marks it High.', verdictOnlyRow));
 
 group('AI output safety: summary, questions, translation');
 const rows3 = [chol, row({ test_name: 'HDL Cholesterol', value: 38, unit: 'mg/dL', ref_low: 40, ref_high: null, flag: 'Low' }), row({ test_name: 'Glucose, Fasting', value: 92, unit: 'mg/dL', ref_low: 70, ref_high: 99, flag: 'Normal' })];
@@ -196,6 +202,7 @@ for (const s of SAMPLES) {
 }
 eq('plain-English line for a marker-only row does not claim a range', plainEnglishFor('Ferritin', 22, 'ng/mL', null, null, 'High').includes('prints no range'), true);
 check('question for a marker-only row never says "null"', !questionsFor([markerRow]).join(' ').includes('null'));
+check('verdict-only templates say the value was not shown and never print "null"', /did not show a numeric value/i.test(plainEnglishFor('Lipoprotein (a)', null, '', null, null, 'High')) && !questionsFor([verdictOnlyRow]).join(' ').includes('null'));
 
 // ------------------------------------------------------------------------------------------------
 group('Localized interface, sharing and handout');
@@ -242,6 +249,9 @@ eq('two identical lines are ambiguous, so no citation rather than a guess', ocr.
 const twinRange = ocr.groupWordsIntoLines([W('Hemoglobin', 100, 100), W('11.2', 400, 100), W('12.0', 500, 100), W('Hemoglobin', 100, 200), W('11.2', 400, 200), W('13.0', 500, 200)], 1000, 1000);
 check('printed range bounds break a tie', ocr.matchRowToLine({ test_name: 'Hemoglobin', value: 11.2, ref_low: 13, ref_high: null }, twinRange)?.y > 0.15);
 check('"Hemoglobin (2)" matches on the name without the suffix', ocr.matchRowToLine({ test_name: 'Hemoglobin (2)', value: 11.2, ref_low: null, ref_high: null }, ocrLinesSynthetic) !== null);
+const verdictCards = ocr.groupWordsIntoLines([W('LIPOPROTEIN (a)', 100, 400), W('HIGH', 700, 400), W('Cholesterol Ratio', 100, 470), W('NORMAL', 700, 470)], 1000, 1000);
+check('a verdict-only portal card gets a citation from its explicit verdict text', ocr.matchRowToLine({ test_name: 'LIPOPROTEIN (a)', value: null, ref_low: null, ref_high: null, flag: 'High' }, verdictCards)?.y > 0.35);
+eq('a verdict-only card is not cited when the expected verdict is absent', ocr.matchRowToLine({ test_name: 'LIPOPROTEIN (a)', value: null, ref_low: null, ref_high: null, flag: 'Low' }, verdictCards), null);
 const pngHeader = readFileSync('public/sample-photo.png');
 eq('PNG size is read from the header', [ocr.imageInfo(pngHeader).width, ocr.imageInfo(pngHeader).height], [1530, 1980]);
 const fakeJpeg = (orientation) => {
@@ -425,13 +435,18 @@ calls = mockMuse(() => ({ rows: [
   { test_name: 'Sodium<script>', value: 140, unit: 'mmol/L', ref_low: 135, ref_high: 145, source_text: 'Sodium 41 mmol/L 135 - 145' },
   { test_name: 'Bad', value: 'abc' }, { test_name: '', value: 3 },
   { test_name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 99, ref_high: 70, source_text: 'Glucose 90 mg/dL 70 - 99' },
+  { test_name: 'Cholesterol Total/Cholesterol HDL Ratio', value: null, unit: '', ref_low: null, ref_high: null, reported_verdict: 'Normal', source_text: 'Cholesterol Total/Cholesterol HDL Ratio NORMAL' },
+  { test_name: 'LIPOPROTEIN (a)', value: null, unit: '', ref_low: null, ref_high: null, reported_verdict: 'High', source_text: 'LIPOPROTEIN (a) HIGH' },
+  { test_name: 'Empty card', value: null, unit: '', ref_low: null, ref_high: null, reported_verdict: null, source_text: 'Empty card' },
 ] }));
 const vis = await muse.extractFromImageWithMuse({ buffer: Buffer.from([1, 2, 3]), mime: 'image/jpeg', regions: 0, kinds: [], preview: '' });
-eq('vision: malformed rows dropped, 3 kept', vis.length, 3);
+eq('vision: malformed or evidence-free rows dropped, numeric and verdict-only rows kept', vis.length, 5);
 check('vision: markup stripped from names', vis.every((r) => !/[<>]/.test(r.test_name)));
 check('vision: row whose numbers are not on its quoted line is marked inconsistent', vis.find((r) => r.test_name.startsWith('Sodium')).consistent === false && vis[0].consistent === true);
 check('vision: a range Muse got backwards (low > high) is replaced by the one our parser reads from the quoted line', vis.find((r) => r.test_name === 'Glucose').ref_low === 70 && vis.find((r) => r.test_name === 'Glucose').ref_high === 99);
 check('vision request sends the image as a data URL', JSON.stringify(calls[0].body.messages[1].content).includes('data:image/jpeg;base64,'));
+check('vision: nullable values and explicit verdicts are requested in the structured output', calls[0].body.messages[0].content.includes('"value": number|null') && calls[0].body.messages[0].content.includes('reported_verdict'));
+check('vision: text-only NORMAL and HIGH cards survive extraction', vis.find((r) => r.test_name.includes('Ratio'))?.reported_verdict === 'Normal' && vis.find((r) => r.test_name === 'LIPOPROTEIN (a)')?.reported_verdict === 'High');
 
 // Digital PDF extraction receives the complete redacted text and must ground every row in one exact line.
 const safePdfText = privacy.toMuseSafeReportText([
@@ -439,16 +454,19 @@ const safePdfText = privacy.toMuseSafeReportText([
   'DOB: 01/01/1970',
   'Hemoglobin 11.2 g/dL 12.0 - 15.5',
   'Glucose 92 mg/dL 70 - 99',
+  'Cholesterol Ratio EXPECTED',
 ].join('\n'));
 calls = mockMuse(() => ({ rows: [
   { test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, source_text: 'Hemoglobin 11.2 g/dL 12.0 - 15.5' },
   { test_name: 'Glucose', value: 999, unit: 'mg/dL', ref_low: 70, ref_high: 99, source_text: 'Glucose 92 mg/dL 70 - 99' },
   { test_name: 'Invented', value: 5, unit: 'mg/dL', ref_low: null, ref_high: null, source_text: 'Invented 5 mg/dL' },
+  { test_name: 'Cholesterol Ratio', value: null, unit: '', ref_low: null, ref_high: null, reported_verdict: 'Expected', source_text: 'Cholesterol Ratio EXPECTED' },
 ] }));
 const pdfExtracted = await muse.extractFromPdfTextWithMuse(safePdfText.text);
 check('PDF extraction: identifying lines are removed before the complete selectable text is sent', !JSON.stringify(calls[0].body.messages).includes('Sample Person') && !JSON.stringify(calls[0].body.messages).includes('01/01/1970') && JSON.stringify(calls[0].body.messages).includes('Hemoglobin 11.2'));
-check('PDF extraction: a row needs an exact source line, so an invented line is dropped', pdfExtracted.length === 2 && !pdfExtracted.some((r) => r.test_name === 'Invented'));
+check('PDF extraction: a row needs an exact source line, so an invented line is dropped', pdfExtracted.length === 3 && !pdfExtracted.some((r) => r.test_name === 'Invented'));
 check('PDF extraction: a value not found on its quoted source line fails grounding', pdfExtracted.find((r) => r.test_name === 'Hemoglobin')?.consistent === true && pdfExtracted.find((r) => r.test_name === 'Glucose')?.consistent === false);
+check('PDF extraction: an EXPECTED-only row is retained as a Normal report verdict', pdfExtracted.find((r) => r.test_name === 'Cholesterol Ratio')?.reported_verdict === 'Normal' && pdfExtracted.find((r) => r.test_name === 'Cholesterol Ratio')?.consistent === true);
 check('PDF extraction: the model receives JSON instructions at zero temperature', calls[0].body.response_format?.type === 'json_object' && calls[0].body.temperature === 0);
 
 // A live run showed Muse quoting "(<200)" correctly but leaving both bounds null, turning a High result into "Unknown".

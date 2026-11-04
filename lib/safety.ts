@@ -13,7 +13,8 @@ export function numbersIn(text: string): string[] {
 }
 
 function allowedNumbers(row: Pick<LabRow, 'value' | 'ref_low' | 'ref_high'>): Set<string> {
-  const s = new Set<string>([String(row.value)]);
+  const s = new Set<string>();
+  if (row.value !== null) s.add(String(row.value));
   if (row.ref_low !== null) s.add(String(row.ref_low));
   if (row.ref_high !== null) s.add(String(row.ref_high));
   return s;
@@ -70,8 +71,13 @@ export function explanationIsSafe(explanation: unknown, row: RowFields): explana
   if (!hasTestName(text, row)) return false;
   const body = stripNames(text, [row]);
   const nums = numbersIn(body);
-  if (!nums.includes(String(row.value)) || !nums.every((n) => allowedNumbers(row).has(n))) return false;
+  if (row.value !== null && !nums.includes(String(row.value))) return false;
+  if (!nums.every((n) => allowedNumbers(row).has(n))) return false;
+  if (row.value === null && !/no numeric value|value (?:was|is) not (?:shown|reported)|did not show (?:a )?(?:numeric )?value/i.test(text)) return false;
   if (containsInterpretation(body)) return false;
+  if (row.value === null && (row.ref_low !== null || row.ref_high !== null)) {
+    return /could not be compared|cannot be compared|no numeric value/i.test(text);
+  }
   // Direction must match the flag that code computed. For rows whose flag came from a report marker
   // with no printed range, accept the marker word instead.
   if (row.ref_low === null && row.ref_high === null && row.flag !== 'Unknown') {
@@ -89,6 +95,7 @@ export function summaryIsSafe(summary: unknown, rows: RowFields[]): summary is s
   for (const flag of ['Normal', 'High', 'Low', 'Unknown'] as const) allowed.add(String(rows.filter((r) => r.flag === flag).length));
   allowed.add(String(rows.length));
   allowed.add(String(rows.filter((r) => r.flag === 'High' || r.flag === 'Low').length));
+  allowed.add(String(rows.filter((r) => r.ref_low === null && r.ref_high === null).length));
   const bodies = (summary as string[]).map((s) => stripNames(s, rows));
   if (!bodies.every((b) => numbersIn(b).every((n) => allowed.has(n)))) return false;
   if (bodies.some((b) => containsInterpretation(b))) return false;
@@ -104,7 +111,8 @@ export function questionIsSafe(question: unknown, row: RowFields): question is s
   if (!hasTestName(q, row)) return false;
   const body = stripNames(q, [row]);
   const nums = numbersIn(body);
-  if (!nums.includes(String(row.value)) || !nums.every((n) => allowedNumbers(row).has(n))) return false;
+  if (row.value !== null && !nums.includes(String(row.value))) return false;
+  if (!nums.every((n) => allowedNumbers(row).has(n))) return false;
   return !containsDiagnosisOrTreatment(body) && !/\brisk|symptom|danger|serious|urgent|emergency|\bcaus(e|es|ed|ing)\b|you (have|are|may|might)/i.test(body);
 }
 

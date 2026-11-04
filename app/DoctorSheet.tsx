@@ -1,5 +1,5 @@
 'use client';
-import { formatRangeCompact } from '@/lib/flags';
+import { formatRangeCompact, formatValue } from '@/lib/flags';
 import { uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language } from '@/lib/types';
 
@@ -71,13 +71,13 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
           <h3>For the doctor (English)</h3>
           <p className="muted small trust-note">
             {report.source_kind === 'photo'
-              ? 'Read from a photo by AI, so every value is marked for checking. Compare with the original report.'
-              : 'Values below were read from the report by code, not AI. Flags compare each value with the range printed on the report.'}
+              ? 'Read from a photo by AI, so every result is marked for checking. Compare with the original report.'
+              : 'Values below were read from the report by code, not AI. Flags compare each value with the printed range, or copy the report verdict only when no range is printed.'}
           </p>
           <ul>
             {flagged.map((r) => (
               <li key={r.test_name}>
-                <strong>{r.test_name}</strong>: {r.value} {r.unit} • Printed range: {formatRangeCompact(r.ref_low, r.ref_high, r.unit, 'not on report')} • {r.flag}
+                <strong>{r.test_name}</strong>: {formatValue(r.value, r.unit)} • Printed range: {formatRangeCompact(r.ref_low, r.ref_high, r.unit, 'not on report')} • {r.flag}
                 {r.flag_source === 'report_marker' && ' (flag copied from the report’s own marker)'}
                 {r.confidence === 'low' && ' • needs review against the original'}
               </li>

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatRangeCompact, questionsFor, summaryFor } from '@/lib/flags';
+import { formatRangeCompact, formatValue, questionsFor, summaryFor } from '@/lib/flags';
 import { flagLabel, uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types';
 import { cropImage, isImageFile, normalizeImage, type CropEdges } from '@/lib/clientImage';
@@ -317,7 +317,7 @@ export default function Home() {
                         </div>
                       )}
                     </td>
-                    <td data-label={ui.valueCol}><span className="value">{r.value} {r.unit}</span></td>
+                    <td data-label={ui.valueCol}><span className="value">{formatValue(r.value, r.unit)}</span></td>
                     <td data-label={ui.rangeCol}>{rangeText(r, 'Range not on report')}</td>
                     <td data-label={ui.flagCol}><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></td>
                     <td data-label={ui.meaningCol}>{display.explain(r)}</td>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { formatRangeCompact } from '@/lib/flags';
+import { formatRangeCompact, formatValue } from '@/lib/flags';
 import type { LabRow } from '@/lib/types';
 
 interface Props {
@@ -58,7 +58,7 @@ export function ReviewRowDialog({ row, citationSource, canViewCitation, onViewCi
         {row.review_reason && <p className="warn review-reason"><strong>Why it needs review:</strong> {row.review_reason}</p>}
 
         <dl className="review-values">
-          <div><dt>Value</dt><dd>{row.value} {row.unit}</dd></div>
+          <div><dt>Value</dt><dd>{formatValue(row.value, row.unit)}</dd></div>
           <div><dt>Printed range</dt><dd>{formatRangeCompact(row.ref_low, row.ref_high, row.unit, 'Not on report')}</dd></div>
           <div><dt>Flag</dt><dd><span className={`flag ${row.flag}`}>{row.flag}</span></dd></div>
         </dl>

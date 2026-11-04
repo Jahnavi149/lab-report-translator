@@ -1,4 +1,5 @@
-import type { ImageSourceBox } from './types';
+import { verdictAppears } from './flags';
+import type { Flag, ImageSourceBox } from './types';
 
 // Where is a result on a photo? Not the language model's guess: a local OCR engine (PaddleOCR, run through ONNX
 // inside this server) finds every printed text box and its exact pixel position, and plain code matches each row to one line. A row is highlighted only when exactly one line
@@ -8,7 +9,7 @@ import type { ImageSourceBox } from './types';
 export interface OcrWord { text: string; x0: number; y0: number; x1: number; y1: number; fx0?: number; fy0?: number; fx1?: number; fy1?: number; /** The four corners the engine found (pixels), for painting a region out exactly. */ quad?: number[][] }
 /** box = where to draw on the photo. flat = the same place on the straightened page, used only to judge layout (same row, left of, between). */
 export interface OcrLine { text: string; box: ImageSourceBox; flat?: ImageSourceBox; /** The engine's own text boxes that make up this line, in reading order (joined with single spaces to make `text`). */ words?: OcrWord[] }
-type RowKey = { test_name: string; value: number; unit?: string; ref_low: number | null; ref_high: number | null };
+type RowKey = { test_name: string; value: number | null; unit?: string; ref_low: number | null; ref_high: number | null; flag?: Flag };
 
 // --- image header facts (no image library needed) -----------------------------------------------
 
@@ -150,6 +151,7 @@ const isValueOnly = (l: OcrLine, value: number) => hasNumberLoose(l.text, value)
  * be one of the range bounds (a value of 190 against "40-190" proves nothing).
  */
 export function valueEndsRangeLine(text: string, row: RowKey): boolean {
+  if (row.value === null) return false;
   const nums = (text.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
   if (nums.length < 2 || nums[nums.length - 1] !== row.value) return false;
   const asBound = [row.ref_low, row.ref_high].filter((b) => b === row.value).length;
@@ -172,6 +174,23 @@ export function matchRowToLine(row: RowKey, lines: OcrLine[]): ImageSourceBox | 
   const exact = lines.filter((l) => alnum(l.text).includes(name));
   const named = exact.length > 0 ? exact : lines.filter((l) => bestSubstringDistance(alnum(l.text), name) <= tolerance);
 
+  // Some portal cards print only a verdict beside the test name. In that case the explicit verdict text,
+  // never its colour or graph position, is the evidence used to place the citation.
+  if (row.value === null) {
+    const marker = row.flag && row.flag !== 'Unknown' ? row.flag : null;
+    if (!marker) return null;
+    const matched: ImageSourceBox[] = [];
+    for (const c of named) {
+      if (verdictAppears(c.text, marker)) { matched.push(c.box); continue; }
+      const inBand = (l: OcrLine) => l !== c && Math.abs(centreY(l) - centreY(c)) <= 0.75 * Math.max(G(l).height, G(c).height);
+      const side = lines.filter((l) => inBand(l) && verdictAppears(l.text, marker) && centreX(l) > centreX(c)
+        && !lines.some((o) => inBand(o) && o !== l && centreX(o) > centreX(c) && centreX(o) < centreX(l)));
+      if (side.length === 1) matched.push(unionBox([c, side[0] as OcrLine]));
+    }
+    return matched.length === 1 ? matched[0] as ImageSourceBox : null;
+  }
+  const resultValue = row.value;
+
   const confirmed: { line: OcrLine; box: ImageSourceBox; text: string }[] = [];
   for (const c of named) {
     const norm = (t: string) => t.replace(/[–—−]/g, '-');
@@ -180,13 +199,13 @@ export function matchRowToLine(row: RowKey, lines: OcrLine[]): ImageSourceBox | 
       .sort((x, y) => G(x).y - G(y).y)
       .find((l) => /^ref/i.test(l.text.trim()) || [row.ref_low, row.ref_high].some((v) => v !== null && hasNumberLoose(norm(l.text), v)));
     const extra = below && !alnum(below.text).includes(name) ? [below] : [];
-    if (hasNumberLoose(norm(c.text), row.value)) { confirmed.push({ line: c, box: unionBox([c, ...extra]), text: norm(`${c.text} ${extra[0]?.text ?? ''}`) }); continue; }
+    if (hasNumberLoose(norm(c.text), resultValue)) { confirmed.push({ line: c, box: unionBox([c, ...extra]), text: norm(`${c.text} ${extra[0]?.text ?? ''}`) }); continue; }
     if (extra[0] && valueEndsRangeLine(norm(extra[0].text), row)) { confirmed.push({ line: c, box: unionBox([c, extra[0]]), text: norm(`${c.text} ${extra[0].text}`) }); continue; }
     // A side box counts only if (a) the name line has no result of its own (a number that is not part of the test
     // name), (b) the box lies to the right of the name (centre to centre; OCR may merge the box with its unit, which pulls its left edge past the name's), and (c) no other text sits between them in that band.
     const own = (c.text.match(/\d+(?:\.\d+)?/g) ?? []).filter((n) => !row.test_name.includes(n));
     const inBand = (l: OcrLine) => l !== c && Math.abs(centreY(l) - centreY(c)) <= 0.75 * Math.max(G(l).height, G(c).height);
-    const side = own.length > 0 ? [] : lines.filter((l) => inBand(l) && isValueOnly(l, row.value) && centreX(l) > centreX(c) && !lines.some((o) => inBand(o) && o !== l && !isValueOnly(o, row.value) && centreX(o) > centreX(c) && centreX(o) < centreX(l)));
+    const side = own.length > 0 ? [] : lines.filter((l) => inBand(l) && isValueOnly(l, resultValue) && centreX(l) > centreX(c) && !lines.some((o) => inBand(o) && o !== l && !isValueOnly(o, resultValue) && centreX(o) > centreX(c) && centreX(o) < centreX(l)));
     if (side.length === 1) confirmed.push({ line: c, box: unionBox([c, side[0] as OcrLine, ...extra]), text: norm(`${c.text} ${side[0]?.text} ${extra[0]?.text ?? ''}`) });
   }
   if (confirmed.length === 1) return (confirmed[0] as (typeof confirmed)[number]).box;

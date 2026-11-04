@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { enhanceWithMuse } from '@/lib/enhance';
-import { applyFlags, plainEnglishFor } from '@/lib/flags';
+import { flagFromEvidence, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, extractFromPdfTextWithMuse, museConfigured } from '@/lib/muse';
 import { matchRowToLine, type OcrLine } from '@/lib/ocr';
 import { PHOTO_REFUSAL_MESSAGES, redactPhoto } from '@/lib/photo';
@@ -17,8 +17,8 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const citationBox = (test_name: string, r: { value: number; unit: string; ref_low: number | null; ref_high: number | null }, ocr: OcrLine[]) => {
-  const box = matchRowToLine({ test_name, ...r }, ocr);
+const citationBox = (test_name: string, r: { value: number | null; unit: string; ref_low: number | null; ref_high: number | null; reported_verdict: 'High' | 'Low' | 'Normal' | null }, ocr: OcrLine[]) => {
+  const box = matchRowToLine({ test_name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: r.reported_verdict ?? 'Unknown' }, ocr);
   return box ? { source_box: box } : {};
 };
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
@@ -73,15 +73,20 @@ export async function POST(req: Request) {
         const n = (seen.get(key) ?? 0) + 1;
         seen.set(key, n);
         const name = n > 1 ? `${r.test_name} (${n})` : r.test_name;
-        const ranged = r.ref_low !== null || r.ref_high !== null;
-        const [flagged] = applyFlags([{ ...r, test_name: name }]);
-        if (!flagged) continue;
+        const resolved = flagFromEvidence(r.value, r.ref_low, r.ref_high, r.reported_verdict);
+        const reviewReason = r.value === null
+          ? resolved.source === 'report_marker'
+            ? `No numeric value or range is printed. The ${resolved.flag} flag is copied from the report's own verdict.`
+            : 'No numeric value is printed for this test.'
+          : resolved.source === 'report_marker'
+            ? `No range is printed. The ${resolved.flag} flag is copied from the report's own verdict.`
+            : resolved.source === 'none' ? 'No range is printed for this test.' : undefined;
         rows.push({
-          test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: flagged.flag,
-          flag_source: ranged ? 'range' : 'none',
-          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, flagged.flag),
-          confidence: ranged ? 'high' : 'low',
-          ...(!ranged ? { review_reason: 'No range is printed for this test.' } : {}),
+          test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: resolved.flag,
+          flag_source: resolved.source,
+          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, resolved.flag),
+          confidence: reviewReason ? 'low' : 'high',
+          ...(reviewReason ? { review_reason: reviewReason } : {}),
           source_text: match.original,
           ...(extracted.lineAnchors[match.index] ? { source_anchor: extracted.lineAnchors[match.index] } : {}),
         });
@@ -111,17 +116,22 @@ export async function POST(req: Request) {
       const ocr = cleaned.lines;
       if (vision.length === 0) return fail('No lab results could be read from this photo. Try a flatter, brighter, closer photo, or upload a digital PDF.');
       const seen = new Map<string, number>();
-      const rows: LabRow[] = applyFlags(vision).map((r) => {
+      const rows: LabRow[] = vision.map((r) => {
         const n = (seen.get(r.test_name.toLowerCase()) ?? 0) + 1;
         seen.set(r.test_name.toLowerCase(), n);
         const name = n > 1 ? `${r.test_name} (${n})` : r.test_name;
-        const ranged = r.ref_low !== null || r.ref_high !== null;
+        const resolved = flagFromEvidence(r.value, r.ref_low, r.ref_high, r.reported_verdict);
+        const reviewReason = r.value === null && resolved.source === 'report_marker'
+          ? `No numeric value or range is shown. The ${resolved.flag} verdict was read from the photo; check it against the original.`
+          : resolved.source === 'report_marker'
+            ? `No range is shown. The ${resolved.flag} verdict was read from the photo; check it against the original.`
+            : r.consistent ? 'Read from a photo: check this row against your original.' : 'Read from a photo, and the result evidence does not all match the text that was quoted. Check this row against your original.';
         return {
-          test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: r.flag,
-          flag_source: ranged ? 'range' : 'none',
-          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, r.flag),
+          test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: resolved.flag,
+          flag_source: resolved.source,
+          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, resolved.flag),
           confidence: 'low',
-          review_reason: r.consistent ? 'Read from a photo: check this row against your original.' : 'Read from a photo, and the numbers do not all match the line that was quoted. Check this row against your original.',
+          review_reason: reviewReason,
           source_text: r.source_text,
           ...citationBox(name, r, ocr),
         };
@@ -131,7 +141,7 @@ export async function POST(req: Request) {
         id: 'uploaded', title: file.name.slice(0, 120), is_synthetic: false, source_kind: 'photo',
         rows: enhanced.rows, summary: enhanced.summary, questions: enhanced.questions,
         verification_passed: false,
-        verification_note: 'Read from a photo with Muse Spark vision. A photo cannot be checked against document text the way a digital PDF can, so every row is marked Needs Review. Please compare each value with your original report before sharing.',
+        verification_note: 'Read from a photo with Muse Spark vision. A photo cannot be checked against document text the way a digital PDF can, so every row is marked Needs Review. Please compare each result with your original report before sharing.',
         source_note: 'Read from your photo. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: true, muse_features: ['photo reading', ...enhanced.features],
         ai_input: {
