@@ -135,7 +135,7 @@ npm run typecheck
 | Photo cleaning | Each fixture is cleaned, read again, and no labelled identifier can be made out while every result row survives; blank and non-image uploads are refused; the image inside the real Muse request body is decoded and read; only `lib/muse.ts` calls a model API |
 | Photo citations | OCR finds the line and code matches it, including cards and tilted photos |
 | Voice Q&A | Intents classify in en/te/hi/es; the 5 required adversarial questions plus 38 more return the redirect line word for word and never reach Muse; every unsafe model answer becomes the redirect line; spoken questions are redacted first |
-| Localized interface, sharing | Every string exists for te/hi/es; share text adds no numbers and keeps the information-only line |
+| Localized interface, sharing | Every interface string exists and is translated in all eight non-English languages; share text adds no numbers and keeps the information-only line |
 | Muse pipeline (mocked) | Good output used, adversarial output dropped, HTTP errors handled, flags and values never change, hostile text stays inside `<data>` |
 
 **Not tested:** the live Meta API. The Muse code follows the documented OpenAI-compatible request shape and is exercised against a mock; its real output quality (especially vision and Telugu translation) is checked by running the app with a key, not by the automated tests.
@@ -158,7 +158,7 @@ Uploads are checked by file signature, capped at 10 MB and rate-limited per IP (
 - Reads **digital PDFs**. A scanned PDF should be uploaded as a photo.
 - The parser handles common one-row-per-line layouts. Lines it cannot read are listed in the UI, not silently dropped.
 - `>40` is treated like `≥40`, so a value exactly equal to the bound is Normal.
-- The Telugu, Hindi and Spanish interface text and voice keywords were written for this project and need native-speaker review. The other five languages show an English interface.
+- The interface text in all eight non-English languages, and the voice keywords for Telugu, Hindi and Spanish, were written for this project and need native-speaker review.
 - Listen and voice need a browser voice for the language; the app warns when there is none. Tested with a stubbed voice, not yet with a real Telugu voice.
 - Not a medical device. Not validated clinically.
 

@@ -198,15 +198,15 @@ check('question for a marker-only row never says "null"', !questionsFor([markerR
 // ------------------------------------------------------------------------------------------------
 group('Localized interface, sharing and handout');
 const enUi = i18n.uiFor('en');
-for (const lang of ['te', 'hi', 'es']) {
+for (const lang of ['te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr']) {
   const u = i18n.uiFor(lang);
   const keys = Object.keys(enUi);
   check(`${lang}: every interface string exists`, keys.every((k) => (Array.isArray(enUi[k]) ? Array.isArray(u[k]) && u[k].length === enUi[k].length && u[k].every(Boolean) : typeof u[k] === typeof enUi[k] && (typeof u[k] !== 'string' || u[k].length > 0))));
-  check(`${lang}: landing, buttons and safety box are actually translated, not English`, ['heroTitleA', 'lede', 'translateHeading', 'dropTitle', 'doctorSheetBtn', 'listenBtn', 'whatsappBtn', 'handoutBtn', 'notMeanBody', 'infoOnly'].every((k) => u[k] !== enUi[k]));
+  check(`${lang}: landing, buttons and safety box are actually translated, not English`, ['heroTitleA', 'lede', 'translateHeading', 'dropTitle', 'doctorSheetBtn', 'listenBtn', 'whatsappBtn', 'handoutBtn', 'notMeanBody', 'infoOnly', 'privacyNote', 'footerNote'].every((k) => u[k] !== enUi[k]));
   check(`${lang}: the "does NOT mean" safety box keeps its meaning (non-empty, differs from English)`, u.notMeanBody.length > 40 && u.notMeanTitle !== enUi.notMeanTitle);
 }
 const tmix = SAMPLES.find((x) => x.id === 'mixed-abnormal');
-for (const lang of ['en', 'te', 'hi', 'es']) {
+for (const lang of ['en', 'te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr']) {
   const sum = tmix.summary;
   const qs = tmix.questions;
   const text = share.buildShareText({ title: tmix.title, summary: sum, questions: qs, questionsHeading: i18n.uiFor(lang).questionsToAsk, disclaimer: i18n.uiFor(lang).infoOnly, synthetic: true });
