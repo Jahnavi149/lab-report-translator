@@ -49,7 +49,7 @@ export default function Home() {
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }, []);
 
   useEffect(() => {
-    document.body.classList.toggle('large', large);
+    document.documentElement.classList.toggle('large', large);
     document.body.classList.toggle('contrast', contrast);
   }, [large, contrast]);
   useEffect(() => { document.documentElement.lang = language; }, [language]);
