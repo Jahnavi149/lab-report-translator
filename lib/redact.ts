@@ -62,7 +62,7 @@ const TITLED_NAME = new RegExp(`(?<![${WORD}])(?:${TITLES.flatMap((t) => [t, t.t
 
 // --- 2. Normalisation ----------------------------------------------------------------------------------
 /** Undoes tricks that hide a label from a regex. Never changes digits or letters other than to their plain forms. */
-export function normalizeForRedaction(text: string): string {
+function normalizeForRedaction(text: string): string {
   return text
     .normalize('NFKC')
     .replace(/[\u200B-\u200F\u2060\uFEFF\u00AD]/g, '')

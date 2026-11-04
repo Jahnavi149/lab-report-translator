@@ -1,6 +1,7 @@
 {
   "name": "lab-report-translator",
   "version": "0.3.0",
+  "description": "Turns a lab report (PDF or photo) into plain language in nine languages. AI explains, code decides.",
   "private": true,
   "license": "MIT",
   "engines": {
@@ -11,9 +12,7 @@
     "build": "node scripts/evaluate.mjs && next build",
     "start": "next start",
     "test": "node scripts/evaluate.mjs",
-    "evaluate": "node scripts/evaluate.mjs",
     "typecheck": "tsc --noEmit",
-    "models": "node scripts/fetch-models.mjs",
     "review:citations": "node scripts/review-citations.mjs",
     "evaluate:phone": "node scripts/simulate-phone.mjs",
     "samples": "node scripts/make-samples.mjs"
@@ -24,10 +23,10 @@
     "onnxruntime-node": "1.31.1",
     "pdfjs-dist": "3.11.174",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "@huggingface/tokenizers": "^0.2.0",
     "@types/node": "20.14.12",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",

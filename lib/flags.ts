@@ -52,7 +52,7 @@ export function priorityRows<T extends { flag: Flag }>(rows: T[]): T[] {
   return rows.filter((r) => r.flag === 'High' || r.flag === 'Low' || r.flag === 'Unknown').slice(0, 3);
 }
 
-export function questionFor(r: LabRow): string {
+function questionFor(r: LabRow): string {
   if (r.flag === 'Unknown') {
     return `My ${r.test_name} was ${val(r)}, but no range was printed on this report. What range should I compare it to, and should we recheck it?`;
   }
@@ -63,7 +63,7 @@ export function questionFor(r: LabRow): string {
   return `My ${r.test_name} was ${val(r)}, while the range on this report is ${range}. What could cause this, and should we recheck it?`;
 }
 
-export const FILLER_QUESTION = 'Is there anything from this report I should track, bring, or ask about at my next visit?';
+const FILLER_QUESTION = 'Is there anything from this report I should track, bring, or ask about at my next visit?';
 
 export function questionsFor(rows: LabRow[]): string[] {
   const qs = priorityRows(rows).map(questionFor);

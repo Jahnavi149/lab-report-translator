@@ -48,7 +48,7 @@ const A = {
   ]),
 };
 
-// --- B: names and places with NO label (only the privacy model can know these are identifiers) -------------------
+// --- B: names and places with NO label (patterns cannot know these are identifiers) -------------------
 const B = {
   name: 'unlabelled-names',
   rows: [['Ferritin', 22], ['TSH', 6.8], ['Vitamin B12', 250]],
@@ -87,8 +87,8 @@ for (const [f, level] of [[A, 'medium'], [B, 'medium'], [C, 'harsh']]) {
   await (await degrade(src, LEVELS[level])).toFile(`${OUT}/${f.name}-${level}.jpg`);
 }
 writeFileSync(`${OUT}/manifest.json`, JSON.stringify([A, B, C].flatMap((f) => [
-  { file: `${f.name}.png`, rows: f.rows, phi: f.phi, needsModel: f.name === 'unlabelled-names' },
-  // needsModel: patterns alone cannot find these names (no label at all, or OCR could not read the label in the harsh photo)
-  { file: `${f.name}-${f.name === 'stacked-caps' ? 'harsh' : 'medium'}.jpg`, rows: f.rows, phi: f.phi, needsModel: f.name === 'unlabelled-names' || f.name === 'stacked-caps' },
+  { file: `${f.name}.png`, rows: f.rows, phi: f.phi, unlabelled: f.name === 'unlabelled-names' },
+  // unlabelled: no readable label sits next to the name (none printed, or OCR could not read it in the harsh photo), so the patterns cannot know it is a name
+  { file: `${f.name}-${f.name === 'stacked-caps' ? 'harsh' : 'medium'}.jpg`, rows: f.rows, phi: f.phi, unlabelled: f.name === 'unlabelled-names' || f.name === 'stacked-caps' },
 ]), null, 2));
 console.log('Wrote fixtures/phi/ (6 images + manifest.json). All data is invented.');

@@ -25,7 +25,6 @@ export function AiSees({ input, voice = [] }: { input: AiInputDisclosure; voice?
         </strong>{' '}
         <span className="muted small">
           {input.photo ? 'The cleaned picture was read again to make sure nothing that was painted could still be made out. A name printed with no label cannot be found automatically, so trim it away before uploading.' : 'The AI never receives the report text, only the result lines below.'}
-          {input.engine === 'patterns+model' ? ' Checked by pattern rules and an optional evaluation model on this server.' : input.engine === 'patterns' ? ' Checked by pattern rules, on this server.' : ''}
         </span>
         {voice.length > 0 && <div className="muted small">Voice questions: {voice.length} asked, {sent.length} sent to the AI{redirected > 0 ? `, ${redirected} handed back to your doctor` : ''}. Only the question text goes, with identifiers removed, plus the test names, values and ranges above. This app never records or stores your voice: your browser\u2019s own speech recognition turns it into text (in some browsers, such as Chrome, the browser\u2019s maker does that step).</div>}
         {input.lines_withheld > 0 && <div className="muted small">{input.lines_withheld} result line{input.lines_withheld === 1 ? ' was' : 's were'} kept out of the second check because {input.lines_withheld === 1 ? 'it has' : 'they have'} extra text.</div>}

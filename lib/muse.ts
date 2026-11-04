@@ -20,7 +20,7 @@ import type { Language, MuseSafeLine, MuseSafeRow, RedactedPhoto } from './types
 
 const DEFAULT_URL = 'https://api.meta.ai/v1/chat/completions';
 
-export function museApiUrl(): string {
+function museApiUrl(): string {
   const raw = (process.env.META_MODEL_API_URL ?? '').trim();
   if (!raw) return DEFAULT_URL;
   if (raw.endsWith('/chat/completions')) return raw;
@@ -29,7 +29,7 @@ export function museApiUrl(): string {
   return raw;
 }
 /** True for empty values and obvious placeholders such as `<META_API_KEY>` or `your_key_here`, so copying .env.example unchanged does not count as having a key. */
-export function isPlaceholderKey(value: string): boolean {
+function isPlaceholderKey(value: string): boolean {
   const v = value.trim();
   return v === '' || /^<.*>$/.test(v) || /^(your[_ -]?(api[_ -]?)?key([_ -]?here)?|changeme|xxx+|todo)$/i.test(v);
 }
@@ -37,7 +37,7 @@ export const museApiKey = (): string => {
   const raw = (process.env.META_MODEL_API_KEY ?? process.env.MODEL_API_KEY ?? '').trim();
   return isPlaceholderKey(raw) ? '' : raw;
 };
-export const museModel = (): string => process.env.META_MODEL ?? 'muse-spark-1.3';
+const museModel = (): string => process.env.META_MODEL ?? 'muse-spark-1.3';
 export const museConfigured = (): boolean => museApiKey().length > 0;
 const timeoutMs = (vision = false): number => Number(process.env.MUSE_TIMEOUT_MS) || (vision ? 55000 : 45000);
 /**
@@ -45,9 +45,9 @@ const timeoutMs = (vision = false): number => Number(process.env.MUSE_TIMEOUT_MS
  * model can spend the whole budget thinking and return an empty answer (finish_reason "length"), which is
  * exactly what a live run showed at 3000. So the budget is generous and adjustable.
  */
-export const museMaxTokens = (): number => Number(process.env.MUSE_MAX_TOKENS) || 8000;
+const museMaxTokens = (): number => Number(process.env.MUSE_MAX_TOKENS) || 8000;
 /** Asks the model to think less (faster, fewer wasted tokens). Set MUSE_REASONING_EFFORT=off to not send it at all. */
-export const museReasoningEffort = (): string | undefined => {
+const museReasoningEffort = (): string | undefined => {
   const v = (process.env.MUSE_REASONING_EFFORT ?? 'low').trim().toLowerCase();
   return v === '' || v === 'off' || v === 'none' ? undefined : v;
 };
@@ -105,7 +105,7 @@ async function callMuse(messages: ChatMessage[], opts: { temperature?: number; v
   throw new Error(`Muse returned an empty response (${why})`);
 }
 
-export function extractJson(text: string): unknown {
+function extractJson(text: string): unknown {
   try { return JSON.parse(text); } catch { /* fall through to brace slicing */ }
   const s = text.indexOf('{'), e = text.lastIndexOf('}');
   if (s >= 0 && e > s) return JSON.parse(text.slice(s, e + 1));

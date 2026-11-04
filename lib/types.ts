@@ -67,7 +67,7 @@ export type MuseSafeRow = Pick<LabRow, 'test_name' | 'value' | 'unit' | 'ref_low
 export type MuseSafeLine = string & { readonly [museSafe]: true };
 
 /**
- * A photo that went through lib/photo.ts: identifiers found by patterns (and by the opt-in evaluation model, if switched on) are painted out of the
+ * A photo that went through lib/photo.ts: identifiers found by the patterns are painted out of the
  * pixels, and a second read of the painted image found none left. The vision call accepts nothing else, so an
  * original upload cannot be sent by mistake. Only lib/photo.ts can create one.
  */
@@ -95,8 +95,6 @@ export interface AiInputDisclosure {
   photo_preview?: string;
   /** Photo uploads: how many regions were painted out. */
   photo_regions?: number;
-  /** Which checks ran: patterns only, or patterns plus the opt-in evaluation model (off in the running app). */
-  engine?: 'patterns+model' | 'patterns';
   /** Result lines kept out of the second check because they held text that could not be explained as a result. */
   lines_withheld: number;
   /** How many identifier lines or patterns were found in the report text and kept away from the AI. */

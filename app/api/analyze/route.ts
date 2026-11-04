@@ -4,7 +4,6 @@ import { applyFlags, plainEnglishFor } from '@/lib/flags';
 import { extractFromImageWithMuse, museConfigured } from '@/lib/muse';
 import { matchRowToLine, type OcrLine } from '@/lib/ocr';
 import { PHOTO_REFUSAL_MESSAGES, redactPhoto } from '@/lib/photo';
-import { addModelAudit } from '@/lib/privacyModel';
 import { parseLabTextDetailed } from '@/lib/parse';
 import { buildAiInput } from '@/lib/privacy';
 import { extractPdfTextWithAnchors } from '@/lib/pdftext';
@@ -62,15 +61,15 @@ export async function POST(req: Request) {
         source_note: 'Read from your PDF. Kept in memory for this session only; cleared when you press Clear report.',
         muse_used: enhanced.features.length > 0, muse_features: enhanced.features,
         skipped_lines: parsed.skipped.slice(0, 10),
-        ai_input: await addModelAudit(buildAiInput(enhanced.rows, { reportText: text, photo: false, checked: true }), text),
+        ai_input: buildAiInput(enhanced.rows, { reportText: text, photo: false, checked: true }),
       };
     } else {
       if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);
       if (rateLimited(req, 'vision', 10)) return fail('Too many photo uploads from this connection. Please wait a few minutes and try again.', 429);
-      // The picture is cleaned first: identifiers are found locally (patterns; the research model only if PRIVACY_MODEL=1) and painted
+      // The picture is cleaned first: identifiers are found locally (patterns) and painted
       // out of the pixels, and the painted picture is read again to prove they are gone. Only that picture can be sent.
       const cleaned = await redactPhoto(buffer);
-      if (!cleaned.ok) return fail(PHOTO_REFUSAL_MESSAGES[cleaned.reason], cleaned.reason === 'no_ocr' || cleaned.reason === 'no_model' || cleaned.reason === 'model_failed' ? 503 : 422);
+      if (!cleaned.ok) return fail(PHOTO_REFUSAL_MESSAGES[cleaned.reason], cleaned.reason === 'no_ocr' ? 503 : 422);
       // Muse reads the values from the cleaned picture; the lines the local OCR read from the original place the citations.
       const vision = await extractFromImageWithMuse(cleaned.photo);
       const ocr = cleaned.lines;
@@ -101,7 +100,7 @@ export async function POST(req: Request) {
         muse_used: true, muse_features: ['photo reading', ...enhanced.features],
         ai_input: {
           ...buildAiInput(enhanced.rows, { photo: true, checked: false }),
-          photo_preview: cleaned.photo.preview, photo_regions: cleaned.photo.regions, engine: cleaned.engine,
+          photo_preview: cleaned.photo.preview, photo_regions: cleaned.photo.regions,
           identifiers_removed: cleaned.photo.regions, removed_kinds: cleaned.photo.kinds,
         },
       };

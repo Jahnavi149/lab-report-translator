@@ -3,7 +3,7 @@ import type { LabReport, LabRow } from './types';
 
 type RawRow = Omit<LabRow, 'flag' | 'plain_english' | 'flag_source' | 'confidence'> & { confidence?: LabRow['confidence'] };
 
-export function buildReport(id: string, title: string, raw: RawRow[], sourceNote: string): LabReport {
+function buildReport(id: string, title: string, raw: RawRow[], sourceNote: string): LabReport {
   const rows: LabRow[] = applyFlags(raw).map((r) => {
     const hasRange = r.ref_low !== null || r.ref_high !== null;
     return {
@@ -49,4 +49,3 @@ export const SAMPLES: LabReport[] = [
   ], 'Synthetic sample. The Ferritin row has no range printed, so it is flagged Unknown and marked Needs Review.'),
 ];
 
-export const sampleById = (id: string): LabReport | undefined => SAMPLES.find((s) => s.id === id);
