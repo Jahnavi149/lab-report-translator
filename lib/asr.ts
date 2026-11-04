@@ -5,7 +5,7 @@ import { sanitizeTestName } from './safety';
 // AI transcribes, code decides: the transcript is only text. It goes through the same classifyVoiceQuestion keyword
 // matcher as typed or browser-recognised speech, so a mis-heard word can at worst produce the fixed redirect line.
 
-export const ASR_LANGUAGES = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish' } as const;
+export const ASR_LANGUAGES = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' } as const;
 export type AsrLang = keyof typeof ASR_LANGUAGES;
 export const isAsrLang = (v: unknown): v is AsrLang => typeof v === 'string' && Object.prototype.hasOwnProperty.call(ASR_LANGUAGES, v);
 

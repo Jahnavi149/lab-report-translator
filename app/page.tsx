@@ -14,8 +14,8 @@ import { PhotoCropDialog } from './PhotoCropDialog';
 import { useVoiceAsk, VoiceButton, VoicePanel } from './VoiceAsk';
 import type { VoiceAction } from '@/lib/voice';
 
-const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', ml: 'Malayalam · മലയാളം', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी' };
-const VOICE_LANG: Record<Language, string> = { en: 'en-US', te: 'te-IN', hi: 'hi-IN', es: 'es-ES', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN' };
+const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी', tl: 'Tagalog', ms: 'Malay · Bahasa Melayu', ar: 'Arabic · العربية', fr: 'French · Français', de: 'German · Deutsch', pt: 'Portuguese · Português', id: 'Indonesian · Bahasa Indonesia' };
+const VOICE_LANG: Record<Language, string> = { en: 'en-US', te: 'te-IN', hi: 'hi-IN', es: 'es-ES', ta: 'ta-IN', kn: 'kn-IN', bn: 'bn-IN', mr: 'mr-IN', tl: 'fil-PH', ms: 'ms-MY', ar: 'ar-SA', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR', id: 'id-ID' };
 
 const rangeText = (r: LabRow, none: string) => formatRangeCompact(r.ref_low, r.ref_high, r.unit, none);
 
@@ -53,7 +53,11 @@ export default function Home() {
     document.documentElement.classList.toggle('large', large);
     document.body.classList.toggle('contrast', contrast);
   }, [large, contrast]);
-  useEffect(() => { document.documentElement.lang = language; }, [language]);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    // Arabic reads right to left; every other language here reads left to right.
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [language]);
 
   // --- Muse translation: cancelled on change, never shows a previous language's text ---------
   useEffect(() => {
@@ -275,7 +279,7 @@ export default function Home() {
               <details className="warn"><summary>{report.skipped_lines.length} line(s) not read. Check them in your original</summary><ul>{report.skipped_lines.map((l, i) => <li key={i}><code>{l}</code></li>)}</ul></details>
             )}
             <h3>{ui.summaryHeading}</h3>
-            <ul className="bigtext">{display.summary.map((s, i) => <li key={i} className={listenIdx === i ? 'speaking' : ''}>{s}</li>)}</ul>
+            <ul className="bigtext">{display.summary.map((s, i) => <li key={i} dir="auto" className={listenIdx === i ? 'speaking' : ''}>{s}</li>)}</ul>
             <h3>{ui.resultsHeading}</h3>
             <table>
               <thead><tr><th>{ui.testCol}</th><th>{ui.valueCol}</th><th>{ui.rangeCol}</th><th>{ui.flagCol}</th><th>{ui.meaningCol}</th>{showSource && <th>Source</th>}</tr></thead>
@@ -297,7 +301,7 @@ export default function Home() {
                     <td data-label={ui.valueCol}><span className="value">{r.value} {r.unit}</span></td>
                     <td data-label={ui.rangeCol}>{rangeText(r, 'Range not on report')}</td>
                     <td data-label={ui.flagCol}><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></td>
-                    <td data-label={ui.meaningCol}>{display.explain(r)}</td>
+                    <td data-label={ui.meaningCol} dir="auto">{display.explain(r)}</td>
                     {showSource && <td data-label="Source">{(pdfFile ? r.source_anchor : r.source_box)
                       ? <button type="button" className="pdf-citation-button" onClick={() => citeRow(r)} title={`View this result in the ${sourceName}`} aria-label={`View ${r.test_name} in the ${sourceName}`}>🔎 <span>View</span></button>
                       : <span aria-label={`No ${sourceName} location available`}>—</span>}</td>}
@@ -306,7 +310,7 @@ export default function Home() {
               </tbody>
             </table>
             <h3>{ui.questionsToAsk}</h3>
-            <ol className="bigtext">{display.questions.map((q, i) => <li key={i} className={listenIdx === display.summary.length + i ? 'speaking' : ''}>{q}</li>)}</ol>
+            <ol className="bigtext">{display.questions.map((q, i) => <li key={i} dir="auto" className={listenIdx === display.summary.length + i ? 'speaking' : ''}>{q}</li>)}</ol>
             <div className="warn"><strong>{ui.notMeanTitle}</strong> {ui.notMeanBody}</div>
             <div className="actions-secondary no-print">
               <button className="btn-ghost" onClick={shareSummary}>{copied ? `✓ ${ui.copiedBtn}` : `📤 ${ui.shareBtn}`}</button>

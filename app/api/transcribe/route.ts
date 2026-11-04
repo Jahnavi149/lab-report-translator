@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     let form: FormData;
     try { form = await req.formData(); } catch { return fail('Invalid request.'); }
     const lang = form.get('lang');
-    if (!isAsrLang(lang)) return fail('Voice questions work in English, Telugu, Hindi and Spanish.');
+    if (!isAsrLang(lang)) return fail('That language is not supported for voice questions.');
     const audio = form.get('audio');
     if (!(audio instanceof Blob)) return fail('The recording was empty.');
     const wav = new Uint8Array(await audio.arrayBuffer());

@@ -163,12 +163,12 @@ export async function verifyWithMuse(items: MuseCheckItem[]): Promise<string[]> 
 }
 
 // 5. Translate. Validated item by item: invalid items become null and stay English.
-export const LANG_NAME: Record<Language, string> = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', ml: 'Malayalam', bn: 'Bengali', mr: 'Marathi' };
+export const LANG_NAME: Record<Language, string> = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' };
 
 export interface MuseTranslation { summary: (string | null)[]; questions: (string | null)[]; explanations: Record<string, string> }
 
 export async function translateWithMuse(payload: { summary: string[]; questions: string[]; explanations: Record<string, string> }, language: Language): Promise<MuseTranslation> {
-  const system = `${INJECTION_GUARD}Translate the JSON values from English to ${LANG_NAME[language]}. Translate the text only. Do not translate test names. Do not change, add, or remove any number, value, unit or range. Do not add any explanation, advice or new information. Keep the same keys and the same array lengths. Return ONLY JSON.`;
+  const system = `${INJECTION_GUARD}Translate the JSON values from English to ${LANG_NAME[language]}. Translate the text only. Do not translate test names. Do not change, add, or remove any number, value, unit or range. Never convert between digits and words: a number written with digits (0-9) stays those same digits, even where the language would normally spell it out or use a special form (for example a dual form or the word for "two"); a number the source spells as an English word ("one", "three") is spelled as a word in the target language and must not become a digit. Do not add any explanation, advice or new information. Keep the same keys and the same array lengths. Return ONLY JSON.`;
   const parsed = extractJson(await callMuse([{ role: 'system', content: system }, { role: 'user', content: wrap(payload) }])) as { summary?: unknown[]; questions?: unknown[]; explanations?: Record<string, unknown> };
   const pick = (src: string[], dst: unknown[] | undefined) => src.map((s, i) => (translationIsSafe(s, dst?.[i]) ? (dst![i] as string).trim() : null));
   const explanations: Record<string, string> = {};

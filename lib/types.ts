@@ -1,6 +1,6 @@
 export type Flag = 'Normal' | 'High' | 'Low' | 'Unknown';
 export type Confidence = 'high' | 'low';
-export type Language = 'en' | 'te' | 'hi' | 'es' | 'ta' | 'kn' | 'ml' | 'bn' | 'mr';
+export type Language = 'en' | 'te' | 'hi' | 'es' | 'ta' | 'kn' | 'bn' | 'mr' | 'tl' | 'ms' | 'ar' | 'fr' | 'de' | 'pt' | 'id';
 export type FlagSource = 'range' | 'report_marker' | 'none';
 
 /** A location in the original PDF. Rectangles use PDF coordinates (origin at bottom-left). */
@@ -17,7 +17,7 @@ export interface ImageSourceBox {
   height: number;
 }
 
-export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr'];
+export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'];
 
 export interface LabRow {
   test_name: string;

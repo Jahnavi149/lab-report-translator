@@ -7,7 +7,7 @@ import type { MuseSafeLine } from './types';
 // What it does, in order, for every line:
 //   1. Normalises the text so tricks do not hide an identifier: Unicode compatibility forms (full-width letters and
 //      digits), zero-width and soft-hyphen characters, odd dashes, and letter-spaced words ("P a t i e n t").
-//   2. Drops the whole line if it carries a labelled identifier, in English, Spanish or an Indian language
+//   2. Drops the whole line if it carries a labelled identifier, in English, Spanish, an Indian language, Tagalog, Malay or Arabic
 //      (name, date of birth, record/account/lab numbers, contact details, address, relatives, insurance, doctor), or
 //      a titled name ("Mr. Rao").
 //   3. In lines that stay, masks emails, URLs, IP addresses, dates in many formats, phone numbers, long digit runs
@@ -52,12 +52,31 @@ const OTHER_LANGUAGES = [
   'പേര്', 'രോഗി', 'ജനന', 'ഫോൺ', 'മൊബൈൽ', 'വിലാസം', 'അച്ഛൻ',
   // Bengali
   'নাম', 'রোগী', 'জন্ম', 'ফোন', 'মোবাইল', 'ঠিকানা', 'পিতা', 'স্বামী',
+  // Tagalog
+  'pangalan', 'pasyente', 'kapanganakan', 'ipinanganak', 'telepono', 'numero', 'cellphone', 'tirahan', 'ama', 'ina', 'asawa', 'doktor', 'manggagamot',
+  // Malay
+  'nama', 'pesakit', 'tarikh\\s+lahir', 'lahir', 'telefon', 'alamat', 'e-?mel', 'kad\\s+pengenalan', 'no\\.?\\s*(?:ic|kp)', 'pasport', 'ayah', 'bapa', 'ibu', 'suami', 'isteri', 'waris', 'insurans', 'klinik', 'perujuk', 'pendaftaran',
+  // French
+  'nom', 'pr[ée]noms?', 'patient(?:e)?', 'n[ée]e?\\s+le', 'naissance', 't[ée]l[ée]phone', 't[ée]l', 'portable', 'adresse', 'courriel', 's[ée]curit[ée]\\s+sociale', 'n°', 'num[ée]ro', 'dossier',
+  'm[ée]decin', 'docteur', 'prescripteur', 'mutuelle', 'assur[ée]e?', 'p[èe]re', 'm[èe]re', '[ée]poux', '[ée]pouse', 'conjoint', 'identifiant', 'ipp', 'iep', 'rue', 'avenue', 'code\\s+postal',
+  // German
+  'vorname', 'nachname', 'familienname', 'patient(?:in)?', 'geburtsdatum', 'geb\\.', 'geboren', 'geburtstag', 'telefon', 'handy', 'mobil', 'anschrift', 'stra[sß]e', 'strasse', 'plz', 'wohnort',
+  '\\p{L}*versicherung\\p{L}*', 'krankenkasse', '\\p{L}*nummer', 'nr', 'ausweis\\p{L}*', 'arzt', '[äa]rztin', 'einsender', 'zuweiser', 'hausarzt', 'vater', 'mutter', 'ehemann', 'ehefrau', 'angeh[öo]rige\\p{L}*', 'kennung',
+  // Portuguese
+  'nome', 'sobrenome', 'telefones?', 'fone', 'celular', 'nascimento', 'dn', 'telem[óo]vel', 'endere[çc]o', 'morada', 'avenida', 'cep', 'cpf', 'rg', 'cnpj', 'nif', 'conv[êe]nio', 'carteirinha', 'prontu[áa]rio', 'm[ée]dico', 'doutor', 'doutora', 'solicitante',
+  'pai', 'm[ãa]e', 'marido', 'esposa', 'c[ôo]njuge', 'registro', 'registo', 'n[úu]mero', 'protocolo', 'atendimento', 'cart[ãa]o',
+  // Indonesian
+  'pasien', 'tanggal\\s+lahir', 'tgl\\.?\\s*lahir', 'telepon', 'telp', 'hp', 'nik', 'ktp', 'bpjs', 'asuransi', 'rekam\\s+medis', 'dokter', 'dpjp', 'pengirim', 'ayah', 'istri', 'orang\\s+tua', 'wali', 'registrasi', 'nomor',
+  // Arabic: an optional "al-" article, hamza and ta marbuta spellings both ways (diacritics are removed first)
+  '(?:ال)?[اأإآ]سم', '(?:ال)?مريض[ةه]?', 'تاريخ\\s+(?:ال)?(?:ميلاد|ولاد[ةه])', '(?:ال)?ميلاد', '(?:ال)?هاتف', '(?:ال)?جوال', '(?:ال)?موبايل', '(?:ال)?محمول', 'رقم',
+  '(?:ال)?هوي[ةه]', '(?:ال)?[اأإ]قام[ةه]', '(?:ال)?عنوان', '(?:ال)?بريد', '(?:ال)?[اأإ]ب', '(?:ال)?[اأإ]م', 'والد[ةه]?', '(?:ال)?زوج[ةه]?', '(?:ال)?طبيب[ةه]?', '(?:ال)?دكتور[ةه]?',
+  '(?:ال)?ملف', '(?:ال)?جنسي[ةه]', '(?:ال)?مستشفى', '(?:ال)?عياد[ةه]', 'ت[اأ]مين', '(?:ال)?مرافق', '(?:ال)?سيد[ةه]?', '(?:ال)?[اأإ]ستاذ[ةه]?', '(?:ال)?[اأإ]نس[ةه]',
 ];
 const WORD = '\\p{L}\\p{M}\\p{N}';
 const LABELS = new RegExp(`(?<![${WORD}])(?:${[...EN, ...OTHER_LANGUAGES].map((s) => s.normalize('NFKC')).join('|')})(?![${WORD}])`, 'iu');
 
 // "Mr. Rao", "MRS LAKSHMI", "Smt Devi": a courtesy title followed by a capitalised word is a person's name.
-const TITLES = ['Mr', 'Mrs', 'Ms', 'Miss', 'Mx', 'Master', 'Smt', 'Shri', 'Sri', 'Shrimati', 'Kumari', 'Sh', 'Baby', 'Prof', 'Sra', 'Srta', 'Don', 'Herr', 'Frau'];
+const TITLES = ['Mr', 'Mrs', 'Ms', 'Miss', 'Mx', 'Master', 'Smt', 'Shri', 'Sri', 'Shrimati', 'Kumari', 'Sh', 'Baby', 'Prof', 'Sra', 'Srta', 'Don', 'Herr', 'Frau', 'Mme', 'Mlle', 'Monsieur', 'Madame', 'Dona', 'Senhor', 'Senhora', 'Bapak', 'Bpk', 'Tn', 'Ny', 'Nn', 'Pak'];
 const TITLED_NAME = new RegExp(`(?<![${WORD}])(?:${TITLES.flatMap((t) => [t, t.toUpperCase()]).join('|')})\\.?\\s+\\p{Lu}[\\p{L}\\p{M}'-]+`, 'u');
 
 // --- 2. Normalisation ----------------------------------------------------------------------------------
@@ -66,7 +85,10 @@ function normalizeForRedaction(text: string): string {
   return text
     .normalize('NFKC')
     .replace(/[\u200B-\u200F\u2060\uFEFF\u00AD]/g, '')
-    .replace(/[\u2010-\u2015\u2212]/g, '-');
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    // Arabic: diacritics and tatweel are dropped, and Arabic-Indic digits become plain digits, so a labelled or unlabelled ID is caught the same way.
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => String((d.codePointAt(0)! - 0x660) % 16));
 }
 /** "P a t i e n t  N a m e" -> "Patient  Name". Only used to test for labels, never to rewrite the line. */
 function squashLetterSpacing(line: string): string {
@@ -219,7 +241,8 @@ const RESULT_WORDS = new Set((
   'male female men women adult adults child children infant newborn fasting random positive negative detected reactive nonreactive non ' +
   'to and or of the for in at less more than equal greater lower upper up under over per ' +
   'mg dl ml ng pg ug mcg gm g l ul iu u mmol umol nmol pmol meq mm hr hrs min sec fl pl cells cu mol dl percent ratio index titer ' +
-  'redacted'
+  'redacted ' +
+  'élevé elevé eleve basse hoch niedrig alto alta baixo baixa bajo baja tinggi rendah normale normaux normal normalwert referenz valeur wert resultado resultat hasil nilai satuan unité einheit unidade jusqu moins inférieur supérieur plus bis unter über ate até abaixo acima kurang dari lebih di atas sampai hingga hasta menos mas más de du des a à'
 ).split(' '));
 
 /** Words in a result line that are not the test name, its unit or ordinary result vocabulary. */

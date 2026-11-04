@@ -3,7 +3,7 @@ import { formatRangeCompact } from '@/lib/flags';
 import { uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language } from '@/lib/types';
 
-const LANG_NAME: Record<Language, string> = { en: 'English', te: 'తెలుగు', hi: 'हिन्दी', es: 'Español', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', bn: 'বাংলা', mr: 'मराठी' };
+const LANG_NAME: Record<Language, string> = { en: 'English', te: 'తెలుగు', hi: 'हिन्दी', es: 'Español', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', bn: 'বাংলা', mr: 'मराठी', tl: 'Tagalog', ms: 'Bahasa Melayu', ar: 'العربية', fr: 'Français', de: 'Deutsch', pt: 'Português', id: 'Bahasa Indonesia' };
 
 interface Props {
   report: LabReport;
@@ -51,11 +51,11 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
       <div className="sheet-grid">
         <div className="sheet-col">
           <h3>{ui.forFamily(LANG_NAME[language])}</h3>
-          <ul>{summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <ul>{summary.map((s, i) => <li key={i} dir="auto">{s}</li>)}</ul>
           <h3>{ui.questionsToAsk}</h3>
-          <ol>{questions.map((q, i) => <li key={i}>{q}</li>)}</ol>
+          <ol>{questions.map((q, i) => <li key={i} dir="auto">{q}</li>)}</ol>
         </div>
-        <div className="sheet-col">
+        <div className="sheet-col" dir="ltr" lang="en">
           <h3>For the doctor (English)</h3>
           <p className="muted small trust-note">
             {report.source_kind === 'photo'
@@ -73,7 +73,7 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
             {flagged.length === 0 && <li>No values outside a printed range.</li>}
           </ul>
           <h3>Questions (English)</h3>
-          <ol>{report.questions.map((q, i) => <li key={i}>{q}</li>)}</ol>
+          <ol>{report.questions.map((q, i) => <li key={i} dir="auto">{q}</li>)}</ol>
         </div>
       </div>
       <h3>{ui.checklist}</h3>
