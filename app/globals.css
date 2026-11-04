@@ -105,6 +105,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .
 .checklist { list-style: none; padding-left: 0; }
 .lines { margin: 18px 0 0; color: #8a98a5; overflow: hidden; white-space: nowrap; }
 .lines.fill { color: var(--ink); font-weight: 700; margin: 12px 0 0; }
+.lines.fill { white-space: normal; }
+.date-input { font: inherit; font-weight: 600; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #fff; }
+.print-only { display: none; }
 .trust-note { margin: 0 0 8px; color: var(--green); font-weight: 700; }
 details.warn summary { cursor: pointer; font-weight: 700; }
 a:focus-visible, summary:focus-visible { outline: 3px solid #0e9f97; outline-offset: 2px; }
@@ -124,7 +127,7 @@ body.contrast .flag.High, body.contrast .flag.Low { text-decoration: underline; 
 body.contrast button, body.contrast select, body.contrast .linkbtn, body.contrast input { background: #fff; color: #000; border: 2px solid #000; }
 body.contrast button.primary { background: #000; color: #fff; box-shadow: none; }
 body.contrast code { background: #fff; border: 1px solid #000; }
-@media print { .sheet-col { border: 1px solid #000; } html.large { font-size: 100%; } }
+@media print { .sheet-col { border: 1px solid #000; } html.large { font-size: 100%; } .print-only { display: inline; } }
 
 /* ---- Listen highlight, WhatsApp link, large-print family handout ---- */
 li.speaking { background: #fff3c4; outline: 3px solid #e0a800; border-radius: 8px; padding: 2px 8px; }

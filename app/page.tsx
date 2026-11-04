@@ -28,6 +28,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showDoctor, setShowDoctor] = useState(false);
+  const [testDate, setTestDate] = useState('');
   const [showHandout, setShowHandout] = useState(false);
   const [listening, setListening] = useState(false);
   const [listenIdx, setListenIdx] = useState<number | null>(null);
@@ -113,6 +114,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not read that file.');
       setReport(data as LabReport);
+      setTestDate('');
       setPdfFile(data.source_kind === 'pdf' ? file : null);
       setSourceAnchor(null);
       setImageFile(data.source_kind === 'photo' ? upload : null);
@@ -190,7 +192,7 @@ export default function Home() {
   useEffect(() => { stopListen(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
 
-  function startNew() { setReport(null); setPdfFile(null); setSourceAnchor(null); setImageFile(null); setSourceBox(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
+  function startNew() { setReport(null); setTestDate(''); setPdfFile(null); setSourceAnchor(null); setImageFile(null); setSourceBox(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
   function clearAll() { startNew(); setError(''); }
 
   const shareText = report ? buildShareText({ title: report.title, summary: display.summary, questions: display.questions, questionsHeading: ui.questionsToAsk, disclaimer: ui.infoOnly, synthetic: report.is_synthetic }) : '';
@@ -322,7 +324,7 @@ export default function Home() {
           <FamilyHandout report={report} language={language} summary={display.summary} questions={display.questions} explain={display.explain} onBack={() => setShowHandout(false)} />
         )}
         {report && showDoctor && (
-          <DoctorSheet report={report} language={language} summary={display.summary} questions={display.questions} flagged={flagged} onBack={() => setShowDoctor(false)} onClear={clearAll} />
+          <DoctorSheet report={report} language={language} summary={display.summary} questions={display.questions} flagged={flagged} testDate={testDate} onTestDate={setTestDate} onBack={() => setShowDoctor(false)} onClear={clearAll} />
         )}
 
         <footer className="no-print"><p>{ui.footerNote}</p></footer>
