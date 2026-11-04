@@ -1,0 +1,57 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> >> >>
+endobj
+4 0 obj
+<< /Length 1322 >>
+stream
+BT /F2 15 Tf 50 732 Td (SYNTHETIC SAMPLE - results with flags only \(no printed ranges\)) Tj ET
+BT /F1 11 Tf 50 702 Td (Patient Name: Alex Example      MRN: 77-120-0045) Tj ET
+BT /F1 11 Tf 50 686 Td (Collected: 03/18/2026) Tj ET
+BT /F2 11 Tf 50 648 Td (Test) Tj ET
+BT /F2 11 Tf 270 648 Td (Result) Tj ET
+BT /F2 11 Tf 340 648 Td (Unit) Tj ET
+BT /F2 11 Tf 440 648 Td (Flag) Tj ET
+BT /F1 11 Tf 50 622 Td (Hemoglobin) Tj ET
+BT /F1 11 Tf 270 622 Td (11.2) Tj ET
+BT /F1 11 Tf 340 622 Td (g/dL) Tj ET
+BT /F1 11 Tf 440 622 Td (Low) Tj ET
+BT /F1 11 Tf 50 600 Td (Potassium) Tj ET
+BT /F1 11 Tf 270 600 Td (5.8) Tj ET
+BT /F1 11 Tf 340 600 Td (mmol/L) Tj ET
+BT /F1 11 Tf 440 600 Td (High) Tj ET
+BT /F1 11 Tf 50 578 Td (Sodium) Tj ET
+BT /F1 11 Tf 270 578 Td (139) Tj ET
+BT /F1 11 Tf 340 578 Td (mmol/L) Tj ET
+BT /F1 11 Tf 50 556 Td (Calcium) Tj ET
+BT /F1 11 Tf 270 556 Td (8.1) Tj ET
+BT /F1 11 Tf 340 556 Td (mg/dL) Tj ET
+BT /F1 11 Tf 440 556 Td (Low) Tj ET
+BT /F1 11 Tf 50 534 Td (ALT) Tj ET
+BT /F1 11 Tf 270 534 Td (88) Tj ET
+BT /F1 11 Tf 340 534 Td (U/L) Tj ET
+BT /F1 11 Tf 440 534 Td (High) Tj ET
+BT /F1 11 Tf 50 512 Td (Urine Protein) Tj ET
+BT /F1 11 Tf 270 512 Td (Positive) Tj ET
+BT /F1 11 Tf 440 512 Td (High) Tj ET
+BT /F1 9 Tf 50 392 Td (Synthetic example for Lab Report Translator. Information only, never a diagnosis.) Tj ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000408 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+1782
+%%EOF

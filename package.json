@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "review:citations": "node scripts/review-citations.mjs",
     "evaluate:phone": "node scripts/simulate-phone.mjs",
-    "samples": "node scripts/make-samples.mjs"
+    "samples": "node scripts/make-samples.mjs && node scripts/make-extra-samples.mjs"
   },
   "dependencies": {
     "@gutenye/ocr-node": "^1.4.9",

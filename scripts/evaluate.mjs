@@ -1157,6 +1157,40 @@ check('the privacy panel tells the user their recording goes to Meta\u2019s tran
 globalThis.fetch = realFetch;
 
 // ------------------------------------------------------------------------------------------------
+group('Sample files in /samples (real PDF reader, no network)');
+{
+  const read = async (f) => {
+    const lg = console.log, wn = console.warn; console.log = () => {}; console.warn = () => {};
+    try { return await extractPdfTextWithAnchors(readFileSync(`samples/${f}`)); } finally { console.log = lg; console.warn = wn; }
+  };
+  // 1. Two pages, identifiers in the header
+  const two = await read('01-two-page-report.pdf');
+  const twoRows = parseLabTextDetailed(two.text).rows;
+  const byTwo = Object.fromEntries(twoRows.map((r) => [r.test_name, r]));
+  eq('01: 18 results over two pages, none skipped', [twoRows.length, new Set(two.lineAnchors.map((a) => a?.page)).size], [18, 2]);
+  eq('01: a result on page 2 is anchored to page 2 (so the viewer opens there)', two.lineAnchors[two.text.split('\n').findIndex((l) => l.startsWith('Potassium'))]?.page, 2);
+  eq('01: flags come from the printed ranges', [byTwo.Creatinine?.flag, byTwo.Platelets?.flag, byTwo['HDL Cholesterol']?.flag, byTwo.Ferritin?.flag], ['High', 'Normal', 'Low', 'Normal']);
+  check('01: the verifier passes', verifyRows(twoRows, two.text).passed);
+  const twoRedacted = safety.redactForMuse(two.text);
+  check('01: name, MRN, birth date, phone and email are all removed before any AI call', !/Jordan|Example|00-481-2290|04\/09\/1981|555|@/.test(twoRedacted) && /Hemoglobin 11\.2 g\/dL 12\.0 - 15\.5/.test(twoRedacted));
+  // 2. French decimal commas and a dot as thousands separator
+  const fr = await read('02-french-decimal-commas.pdf');
+  const frBy = Object.fromEntries(parseLabTextDetailed(fr.text).rows.map((r) => [r.test_name, r]));
+  eq('02: decimal commas read as decimals, a dot thousands separator as thousands', [frBy['Hémoglobine']?.value, frBy['Glycémie à jeun']?.value, frBy['Cholestérol total']?.value, frBy['Triglycérides']?.value], [11.2, 1.26, 2.3, 1230]);
+  eq('02: accented test names and "inférieur à" ranges give the right flags', [frBy['Hémoglobine']?.flag, frBy['Glycémie à jeun']?.flag, frBy['Cholestérol total']?.flag, frBy.Ferritine?.flag], ['Low', 'High', 'High', 'Normal']);
+  check('02: the French header (name, date of birth, phone) is removed', !/Camille|12\/05\/1979|01 55 01 23 45/.test(safety.redactForMuse(fr.text)));
+  // 3. Flags only
+  const flags = await read('03-flags-without-ranges.pdf');
+  const flagRows = parseLabTextDetailed(flags.text).rows;
+  const flagBy = Object.fromEntries(flagRows.map((r) => [r.test_name, r]));
+  check('03: a printed High/Low word is copied as the verdict and the row is marked for review; no word means Unknown', flagBy.Hemoglobin?.flag === 'Low' && flagBy.Potassium?.flag === 'High' && flagBy.Sodium?.flag === 'Unknown' && flagRows.every((r) => r.confidence === 'low'));
+  // 5. A scan has no text layer; 6. not a lab report
+  eq('05: the scanned PDF has no selectable text, so the app asks for an image instead', (await read('05-scanned-no-text.pdf')).text.trim(), '');
+  check('06: the recipe contains no lab test names', !/hemoglobin|cholesterol|glucose|creatinine|mg\/dL/i.test((await read('06-not-a-lab-report.pdf')).text));
+  check('04: the phone photo is a real picture', (await import('sharp')).default(readFileSync('samples/04-phone-photo.jpg')) && readFileSync('samples/04-phone-photo.jpg').length > 20000);
+}
+
+// ------------------------------------------------------------------------------------------------
 group('Every message and dialog in all fifteen languages');
 {
   const app = load('i18n-app');
