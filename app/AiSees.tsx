@@ -9,6 +9,7 @@ export function AiSees({ input, voice = [] }: { input: AiInputDisclosure; voice?
   const redirected = voice.filter((v) => v.redirected).length;
   const payload = {
     ...(input.photo ? { picture: 'The cleaned photo shown below, sent once so the results can be read from it.' } : {}),
+    ...(input.redacted_report_text ? { redacted_pdf_text_for_extraction: input.redacted_report_text } : {}),
     results_sent: input.rows,
     ...(input.source_lines.length > 0 ? { result_lines_for_second_check: input.source_lines } : {}),
     ...(voice.length > 0 ? { voice_questions: { asked: voice.length, sent_to_ai: sent.length, handed_back_to_doctor: redirected, sent: sent.map((v) => ({ question: v.question_sent, answer: v.redirected ? '(not used: answer failed the safety check)' : v.answer })) } } : {}),
@@ -21,16 +22,16 @@ export function AiSees({ input, voice = [] }: { input: AiInputDisclosure; voice?
         <strong>
           {input.photo
             ? n > 0 ? `Your photo was cleaned before it was sent: ${n} ${n === 1 ? 'area' : 'areas'} with labelled personal details ${n === 1 ? 'was' : 'were'} painted out${kinds}.` : 'Your photo was checked before it was sent: no labelled personal details were found on it.'
-            : n > 0 ? `${n} identifier${n === 1 ? '' : 's'} on your report ${n === 1 ? 'was' : 'were'} kept away from the AI.` : 'No identifiers were sent to the AI.'}
+            : n > 0 ? `${n} identifier${n === 1 ? '' : 's'} on your PDF ${n === 1 ? 'was' : 'were'} removed before its text was sent to the AI.` : 'The PDF text was checked for identifiers before it was sent to the AI.'}
         </strong>{' '}
         <span className="muted small">
-          {input.photo ? 'The cleaned picture was read again to make sure nothing that was painted could still be made out. A name printed with no label cannot be found automatically, so trim it away before uploading.' : 'The AI never receives the report text, only the result lines below.'}
+          {input.photo ? 'The cleaned picture was read again to make sure nothing that was painted could still be made out. A name printed with no label cannot be found automatically, so trim it away before uploading.' : 'The AI receives the redacted selectable PDF text so it can identify the result rows. Pattern-based redaction can miss an unlabelled name.'}
         </span>
         {voice.length > 0 && <div className="muted small">Voice questions: {voice.length} asked, {sent.length} sent to the AI{redirected > 0 ? `, ${redirected} handed back to your doctor` : ''}. Only the question text goes, with identifiers removed, plus the test names, values and ranges above. This app never stores your voice. The recording goes to Meta\u2019s Muse Voice Transcribe only to be turned into text (for English questions, with the test names to help it spell them), and is then dropped. If that is unavailable, your browser\u2019s own speech recognition does this step instead; in some browsers, such as Chrome, the browser\u2019s maker handles it.</div>}
         {input.lines_withheld > 0 && <div className="muted small">{input.lines_withheld} result line{input.lines_withheld === 1 ? ' was' : 's were'} kept out of the second check because {input.lines_withheld === 1 ? 'it has' : 'they have'} extra text.</div>}
         <details className="ai-sees">
           <summary>What the AI sees</summary>
-          <p className="muted small">This is everything the AI is given about this report: {input.photo ? 'the cleaned photo, ' : ''}test names, values, units and printed ranges{input.source_lines.length > 0 ? ', and each result\u2019s own line' : ''}. The sentences it writes are sent back to it only if you ask for a translation. A spoken question is sent only when you ask it to explain a result or a doctor question.</p>
+          <p className="muted small">This is everything the AI is given about this report: {input.photo ? 'the cleaned photo, ' : input.redacted_report_text ? 'the redacted selectable PDF text, ' : ''}test names, values, units and printed ranges{input.source_lines.length > 0 ? ', and each result\u2019s own line' : ''}. The sentences it writes are sent back to it only if you ask for a translation. A spoken question is sent only when you ask it to explain a result or a doctor question.</p>
           {input.photo_preview && (
             // eslint-disable-next-line @next/next/no-img-element
             <img className="ai-photo" src={input.photo_preview} alt="The cleaned photo that was sent to the AI. Black boxes cover personal details." />

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { enhanceWithMuse } from '@/lib/enhance';
 import { applyFlags, plainEnglishFor } from '@/lib/flags';
-import { extractFromImageWithMuse, museConfigured } from '@/lib/muse';
+import { extractFromImageWithMuse, extractFromPdfTextWithMuse, museConfigured } from '@/lib/muse';
 import { matchRowToLine, type OcrLine } from '@/lib/ocr';
 import { PHOTO_REFUSAL_MESSAGES, redactPhoto } from '@/lib/photo';
-import { parseLabTextDetailed } from '@/lib/parse';
-import { buildAiInput } from '@/lib/privacy';
+import { buildAiInput, toMuseSafeReportText } from '@/lib/privacy';
 import { extractPdfTextWithAnchors } from '@/lib/pdftext';
 import { rateLimited } from '@/lib/ratelimit';
 import { verifyRows } from '@/lib/verify';
+import { redactForMuse } from '@/lib/safety';
 import type { LabReport, LabRow } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -22,6 +22,7 @@ const citationBox = (test_name: string, r: { value: number; unit: string; ref_lo
   return box ? { source_box: box } : {};
 };
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
+const normalizeLine = (line: string) => line.trim().replace(/[â€“â€”âˆ’]/g, '-').replace(/\s+/g, ' ');
 
 // Trust file contents, not the filename or the declared MIME type.
 function sniff(buf: Buffer): 'pdf' | 'png' | 'jpeg' | 'webp' | null {
@@ -45,23 +46,58 @@ export async function POST(req: Request) {
 
     let report: LabReport;
     if (kind === 'pdf') {
+      if (!museConfigured()) return fail('PDF reading is not available right now because the model is not configured.', 503);
       const extracted = await extractPdfTextWithAnchors(buffer);
       const text = extracted.text;
-      const parsed = parseLabTextDetailed(text, extracted.lineAnchors);
-      if (parsed.rows.length === 0) return fail('No lab results could be read from this file. If it is a scan or photo, upload it as an image instead, or try the example report.');
-      const verification = verifyRows(parsed.rows, text);
+      if (!text.trim()) return fail('No selectable text was found in this PDF. If it is a scan, upload it as an image instead.');
+      const safePdf = toMuseSafeReportText(text);
+      if (!safePdf.text.trim()) return fail('No report text remained after the privacy check. Please try a report with a clearly separated results table.');
+
+      // Muse chooses the semantic table fields. Code accepts only rows grounded in an exact redacted PDF line,
+      // then reconnects that line to the original PDF coordinates for verification and source highlighting.
+      const extractedRows = await extractFromPdfTextWithMuse(safePdf.text);
+      const sourceLines = text.split(/\r?\n/).map((line, index) => ({
+        index,
+        original: normalizeLine(line),
+        redacted: normalizeLine(redactForMuse(line)),
+      }));
+      const usedLines = new Set<number>();
+      const seen = new Map<string, number>();
+      const rows: LabRow[] = [];
+      for (const r of extractedRows) {
+        if (!r.consistent) continue;
+        const match = sourceLines.find((line) => !usedLines.has(line.index) && line.redacted === normalizeLine(r.source_text));
+        if (!match || !match.original) continue;
+        usedLines.add(match.index);
+        const key = r.test_name.toLocaleLowerCase();
+        const n = (seen.get(key) ?? 0) + 1;
+        seen.set(key, n);
+        const name = n > 1 ? `${r.test_name} (${n})` : r.test_name;
+        const ranged = r.ref_low !== null || r.ref_high !== null;
+        const [flagged] = applyFlags([{ ...r, test_name: name }]);
+        if (!flagged) continue;
+        rows.push({
+          test_name: name, value: r.value, unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, flag: flagged.flag,
+          flag_source: ranged ? 'range' : 'none',
+          plain_english: plainEnglishFor(name, r.value, r.unit, r.ref_low, r.ref_high, flagged.flag),
+          confidence: ranged ? 'high' : 'low',
+          ...(!ranged ? { review_reason: 'No range is printed for this test.' } : {}),
+          source_text: match.original,
+          ...(extracted.lineAnchors[match.index] ? { source_anchor: extracted.lineAnchors[match.index] } : {}),
+        });
+      }
+      if (rows.length === 0) return fail('No lab results could be grounded in this PDF text. If it is a scan, upload it as an image instead, or try a clearer digital PDF.');
+      const verification = verifyRows(rows, text);
       const enhanced = await enhanceWithMuse(verification.rows, { check: true });
       const museNote = enhanced.flaggedByMuse.length > 0 ? ` Muse's second check also could not confirm: ${enhanced.flaggedByMuse.join(', ')}.` : '';
-      const skippedNote = parsed.skipped.length > 0 ? ` ${parsed.skipped.length} line${parsed.skipped.length === 1 ? '' : 's'} looked like results but could not be read safely and ${parsed.skipped.length === 1 ? 'was' : 'were'} left out.` : '';
       report = {
         id: 'uploaded', title: file.name.slice(0, 120), is_synthetic: false, source_kind: 'pdf',
         rows: enhanced.rows, summary: enhanced.summary, questions: enhanced.questions,
-        verification_passed: verification.passed && enhanced.flaggedByMuse.length === 0 && parsed.skipped.length === 0,
-        verification_note: `${verification.note}${museNote}${skippedNote}`,
+        verification_passed: verification.passed && enhanced.flaggedByMuse.length === 0,
+        verification_note: `${verification.note}${museNote}`,
         source_note: 'Read from your PDF. Kept in memory for this session only; cleared when you press Clear report.',
-        muse_used: enhanced.features.length > 0, muse_features: enhanced.features,
-        skipped_lines: parsed.skipped.slice(0, 10),
-        ai_input: buildAiInput(enhanced.rows, { reportText: text, photo: false, checked: true }),
+        muse_used: true, muse_features: ['PDF text extraction', ...enhanced.features],
+        ai_input: buildAiInput(enhanced.rows, { reportText: text, redactedReportText: safePdf.text, photo: false, checked: true }),
       };
     } else {
       if (!museConfigured()) return fail('Photo reading is not available right now. Please upload a digital PDF instead.', 503);

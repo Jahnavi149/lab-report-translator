@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { cleanTranscript, languageBiasFor, type AsrLang } from './asr';
 import { hasNumberToken } from './verify';
-import { explanationIsSafe, questionIsSafe, sanitizeTestName, summaryIsSafe, translationIsSafe } from './safety';
+import { explanationIsSafe, looksIdentifying, questionIsSafe, sanitizeTestName, summaryIsSafe, translationIsSafe } from './safety';
 import { priorityRows } from './flags';
 import { parseLabText } from './parse';
 import type { MuseCheckItem } from './privacy';
-import type { Language, MuseSafeLine, MuseSafeRow, RedactedPhoto } from './types';
+import type { Language, MuseSafeLine, MuseSafeReportText, MuseSafeRow, RedactedPhoto } from './types';
 
 // Meta Model API (OpenAI-compatible chat completions) with Muse Spark.
 //   META_MODEL_API_KEY  required for any Muse call (alias: MODEL_API_KEY)
@@ -15,8 +15,9 @@ import type { Language, MuseSafeLine, MuseSafeRow, RedactedPhoto } from './types
 //   MUSE_MAX_TOKENS     optional output+thinking token budget, default 8000
 //   MUSE_REASONING_EFFORT optional, default "low"; "off" stops sending the parameter
 //
-// AI explains, code decides.
-//   - Muse never decides a flag, value, unit or range. Those come from lib/parse.ts and lib/flags.ts.
+// AI extracts and explains; code validates and decides flags.
+//   - Muse extracts values, units and ranges from photos and redacted PDF text. Code grounds those fields in source
+//     evidence and computes every flag in lib/flags.ts.
 //   - Every Muse output passes lib/safety.ts. A sentence that fails is dropped and the code-written
 //     template (lib/flags.ts) is shown in its place, so an unsafe AI sentence never reaches the user.
 
@@ -162,7 +163,46 @@ export async function verifyWithMuse(items: MuseCheckItem[]): Promise<string[]> 
   return items.filter(({ row }) => parsed[row.test_name] === false).map(({ row }) => row.test_name);
 }
 
-// 5. Translate. Validated item by item: invalid items become null and stay English.
+// 5. PDF extraction: read complete, locally redacted selectable text into grounded rows.
+// Values and ranges are accepted only when the model quotes an exact line containing those tokens.
+export interface TextExtractionRow { test_name: string; value: number; unit: string; ref_low: number | null; ref_high: number | null; source_text: string; consistent: boolean }
+
+export async function extractFromPdfTextWithMuse(reportText: MuseSafeReportText): Promise<TextExtractionRow[]> {
+  const system = `${INJECTION_GUARD}You are a lab report table extractor. Read the complete redacted PDF text and return only actual patient lab-result rows, not headers, demographics, dates, identifiers, page numbers, comments, or summary statistics. Preserve table semantics: choose the result value from the result column and the reference range from the reference-range column. Return ONLY JSON: {"rows":[{"test_name": string, "value": number, "unit": string, "ref_low": number|null, "ref_high": number|null, "source_text": string}]}. source_text must be the exact complete line from the supplied text that supports the row. Copy values, units and ranges exactly. For "<200" use ref_low null and ref_high 200; for ">40" use ref_low 40 and ref_high null. If no single reference range is printed, use null for both bounds. Never invent, calculate, or infer a value or range. Omit any row whose result is unclear.`;
+  const parsed = extractJson(await callMuse([
+    { role: 'system', content: system },
+    { role: 'user', content: wrap({ report_text: reportText }) },
+  ], { temperature: 0 })) as { rows?: Record<string, unknown>[] };
+  if (!Array.isArray(parsed.rows)) throw new Error('Muse PDF extraction did not return rows');
+
+  const cleanLine = (s: string) => s.trim().replace(/\s+/g, ' ');
+  const lines = reportText.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  const rows: TextExtractionRow[] = [];
+  for (const r of parsed.rows.slice(0, 60)) {
+    const name = sanitizeTestName(typeof r.test_name === 'string' ? r.test_name : '');
+    const value = typeof r.value === 'number' && Number.isFinite(r.value) ? r.value : NaN;
+    const quoted = typeof r.source_text === 'string' ? cleanLine(r.source_text).slice(0, 500) : '';
+    const source = lines.find((line) => line === quoted);
+    if (!name || looksIdentifying(name) || Number.isNaN(value) || !source) continue;
+
+    const bound = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+    let low = bound(r.ref_low), high = bound(r.ref_high);
+    const ordered = low === null || high === null || low <= high;
+    if (!ordered) { low = null; high = null; }
+    const unit = typeof r.unit === 'string' ? r.unit.replace(/[^\p{L}\p{N}/%ÂµÎ¼^*.-]/gu, '').slice(0, 20) : '';
+    const sourceLower = source.toLocaleLowerCase();
+    const consistent = sourceLower.includes(name.toLocaleLowerCase())
+      && hasNumberToken(source, value)
+      && (!unit || sourceLower.includes(unit.toLocaleLowerCase()))
+      && (low === null || hasNumberToken(source, low))
+      && (high === null || hasNumberToken(source, high))
+      && ordered;
+    rows.push({ test_name: name, value, unit, ref_low: low, ref_high: high, source_text: source, consistent });
+  }
+  return rows;
+}
+
+// 6. Translate. Validated item by item: invalid items become null and stay English.
 export const LANG_NAME: Record<Language, string> = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', ml: 'Malayalam', bn: 'Bengali', mr: 'Marathi' };
 
 export interface MuseTranslation { summary: (string | null)[]; questions: (string | null)[]; explanations: Record<string, string> }
@@ -179,7 +219,7 @@ export async function translateWithMuse(payload: { summary: string[]; questions:
   return { summary: pick(payload.summary, parsed.summary), questions: pick(payload.questions, parsed.questions), explanations };
 }
 
-// 7. Voice: Muse writes the words of one answer. Typed like every other call: only safe rows and a redacted line can go in,
+// 8. Voice: Muse writes the words of one answer. Typed like every other call: only safe rows and a redacted line can go in,
 // so the spoken question (MuseSafeLine) and the report context (MuseSafeRow[]) are the whole input. `system` is fixed code text.
 export async function answerVoiceWithMuse(args: { system: string; question: MuseSafeLine; rows: MuseSafeRow[]; doctorQuestion?: MuseSafeLine }): Promise<{ english: unknown; translated: unknown }> {
   const data = { ...(args.doctorQuestion ? { doctor_question: args.doctorQuestion } : {}), rows: rowsPayload(args.rows) };
@@ -188,7 +228,7 @@ export async function answerVoiceWithMuse(args: { system: string; question: Muse
   return { english: parsed.english, translated: parsed.translated };
 }
 
-// 6. Vision: read a photo of a report. Rows from here are always low confidence until the user checks them.
+// 7. Vision: read a photo of a report. Rows from here are always low confidence until the user checks them.
 export interface VisionRow { test_name: string; value: number; unit: string; ref_low: number | null; ref_high: number | null; source_text: string; consistent: boolean }
 
 /** Takes only a photo that lib/photo.ts has cleaned: an original upload (a Buffer) does not typecheck. */
