@@ -48,10 +48,25 @@ export function formatRangeCompact(refLow: number | null, refHigh: number | null
   return none;
 }
 
-export const formatValue = (value: number | null, unit: string, none = 'Value not shown') =>
-  value === null ? none : `${value}${unit ? ` ${unit}` : ''}`;
+export const formatValue = (value: number | null, unit: string, none = 'Value not shown', qualifier?: '<' | '>') =>
+  value === null ? none : `${qualifier ?? ''}${value}${unit ? ` ${unit}` : ''}`;
 
-const val = (r: Pick<LabRow, 'value' | 'unit'>) => formatValue(r.value, r.unit, 'value not shown');
+/**
+ * A value printed as a limit ("<0.3" means the true value is somewhere below 0.3). The flag is decided only when every
+ * possible true value lands on the same side of the printed range; otherwise it stays Unknown and the row is reviewed.
+ */
+export function flagForQualified(qualifier: '<' | '>', value: number, refLow: number | null, refHigh: number | null): Flag {
+  if (qualifier === '<') {
+    if (refLow !== null && value <= refLow) return 'Low';
+    if (refHigh !== null && value <= refHigh) return refLow === null ? 'Normal' : 'Unknown';
+    return 'Unknown';
+  }
+  if (refHigh !== null && value >= refHigh) return 'High';
+  if (refLow !== null && value >= refLow) return refHigh === null ? 'Normal' : 'Unknown';
+  return 'Unknown';
+}
+
+const val = (r: Pick<LabRow, 'value' | 'unit' | 'qualifier'>) => formatValue(r.value, r.unit, 'value not shown', r.qualifier);
 
 export function summaryFor(rows: LabRow[]): string[] {
   const flagged = rows.filter((r) => r.flag === 'High' || r.flag === 'Low');
@@ -101,12 +116,12 @@ export function questionsFor(rows: LabRow[]): string[] {
   return qs.slice(0, 3);
 }
 
-export function plainEnglishFor(testName: string, value: number | null, unit: string, refLow: number | null, refHigh: number | null, flag: Flag): string {
+export function plainEnglishFor(testName: string, value: number | null, unit: string, refLow: number | null, refHigh: number | null, flag: Flag, qualifier?: '<' | '>'): string {
   if (value === null) {
     if (refLow === null && refHigh === null && flag !== 'Unknown') return `${testName} did not show a numeric value. The report marks it ${flag}, and no range was printed.`;
     return `${testName} did not show a numeric value, so it could not be compared with a printed range.`;
   }
-  const v = formatValue(value, unit);
+  const v = formatValue(value, unit, undefined, qualifier);
   const ranged = refLow !== null || refHigh !== null;
   if (flag === 'Unknown') return `${testName} was ${v}, but no range was printed on this report, so we cannot say if it is inside or outside a range.`;
   if (!ranged) return `${testName} was ${v}. The report itself marks it ${flag}, but it prints no range.`;

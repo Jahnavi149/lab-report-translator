@@ -3,17 +3,18 @@
 [← Back to README](../README.md)
 
 ```bash
-npm test      # 726 checks; also runs before every `npm run build`
+npm test      # 739 checks; also runs before every `npm run build`
 ```
 
 [`scripts/evaluate.mjs`](../scripts/evaluate.mjs) runs the real `lib/` modules, the real sample PDF, real OCR on fixture photos and a mocked Meta API. No key or network needed.
 
-## What the 726 checks cover
+## What the 739 checks cover
 
 | Area | Examples |
 |---|---|
 | Flag engine | High, Low, Normal, Unknown; conflicting ranges become Needs review |
 | Parser, PDF extraction and verifier | Real PDF end to end; Muse's PDF rows accepted only when grounded in an exact source line; decimal-comma reports in French, German, Portuguese, Indonesian, Spanish, including PDFs with accented characters; malformed numbers refused |
+| Values printed as limits | `<0.3` and `>60` keep their sign on screen; the flag is decided only when every possible value lands on the same side of the range, otherwise the row goes to review; results written in words are listed as lines not read |
 | AI output safety | Diagnosis, advice, wrong numbers and wrong direction are all rejected and replaced |
 | Muse pipeline | Mocked API with bad output injected: every failure falls back to code-written text |
 | Privacy | 30+ adversarial identifier lines; every request body inspected for leaks; four new languages' header lines removed |

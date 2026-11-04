@@ -11,7 +11,7 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 const withCommas = (n: number) => (Number.isInteger(n) ? n.toLocaleString('en-US') : String(n));
 
 /** The ways a number can be printed: dot or comma decimals, and thousands grouped by comma, dot or a space. */
-function printedForms(n: number): string[] {
+export function printedForms(n: number): string[] {
   const plain = [String(n), n.toFixed(1), n.toFixed(2), n.toFixed(3)].filter((f) => Number(f) === n);
   const forms = new Set<string>([...plain, ...plain.map((f) => f.replace('.', ','))]);
   if (Number.isInteger(n) && n >= 1000) { forms.add(withCommas(n)); forms.add(withCommas(n).replace(/,/g, '.')); forms.add(withCommas(n).replace(/,/g, ' ')); }
@@ -33,6 +33,20 @@ function verifyRow(row: LabRow, normalizedSource: string): string | null {
   if (row.ref_low !== null && !hasNumberToken(line, row.ref_low)) return 'its lower range bound was not found on its line';
   if (row.ref_high !== null && !hasNumberToken(line, row.ref_high)) return 'its upper range bound was not found on its line';
   return null;
+}
+
+/**
+ * "<0.3" or ">60": is the value printed as a limit? Looks at the first place the number appears on the line (the result
+ * comes before the range, so a range such as "<0.5" is never mistaken for the result's own sign).
+ */
+export function qualifierOf(line: string, value: number): '<' | '>' | null {
+  let first: { index: number; sign: string | null } | null = null;
+  for (const form of printedForms(value)) {
+    const re = new RegExp(`(?<![\\d.,])(?:([<>\u2264\u2265])\\s*=?\\s*)?${esc(form)}(?![\\d]|[.,]\\d)`, 'g');
+    for (const m of line.matchAll(re)) { if (!first || m.index! < first.index) first = { index: m.index!, sign: m[1] ?? null }; }
+  }
+  if (!first?.sign) return null;
+  return first.sign === '<' || first.sign === '\u2264' ? '<' : '>';
 }
 
 export interface Verification {

@@ -63,7 +63,7 @@ export function ReviewRowDialog({ row, language, where, canViewCitation, onViewC
         {row.review_reason && <p className="warn review-reason"><strong>{t('whyReview')}</strong> {localizeServerText(row.review_reason, language)}</p>}
 
         <dl className="review-values">
-          <div><dt>{t('valueLabel')}</dt><dd>{formatValue(row.value, row.unit)}</dd></div>
+          <div><dt>{t('valueLabel')}</dt><dd>{formatValue(row.value, row.unit, undefined, row.qualifier)}</dd></div>
           <div><dt>{t('printedRange')}</dt><dd>{formatRangeCompact(row.ref_low, row.ref_high, row.unit, t('notOnReport'))}</dd></div>
           <div><dt>{t('flagWord')}</dt><dd><span className={`flag ${row.flag}`}>{flagLabel(language, row.flag)}</span></dd></div>
         </dl>

@@ -41,7 +41,7 @@ export async function enhanceWithMuse(rows: LabRow[], opts: { check?: boolean } 
   let out = rows;
   if (explain.status === 'fulfilled') {
     const explained = explain.value;
-    if (Object.keys(explained).length > 0) { out = out.map((r) => ({ ...r, plain_english: explained[r.test_name] ?? r.plain_english })); features.push('explanations'); }
+    if (Object.keys(explained).length > 0) { out = out.map((r) => ({ ...r, plain_english: r.qualifier ? r.plain_english : explained[r.test_name] ?? r.plain_english })); features.push('explanations'); }
   } else log('explanations', explain);
 
   let finalSummary = baseSummary;

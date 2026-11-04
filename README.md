@@ -72,7 +72,7 @@ Or skip setup and use the [live app](https://lab-report-translator-chu4l7oeaa-el
 
 ## Tests
 
-`npm test` runs **726 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
+`npm test` runs **739 checks** with no key or network: flag engine, parser (including decimal-comma reports in five languages), safety filters, privacy, photo cleaning, voice in all 15 languages, and the Muse pipeline with bad output injected. → [Testing](docs/testing.md)
 
 ## Documentation
 

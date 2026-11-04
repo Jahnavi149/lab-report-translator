@@ -148,6 +148,7 @@ export const EN_APP = {
   s_textNoRangeMarker: "No range is printed. The {flag} flag is copied from the report's own marker.",
   s_rangeUnreadable: 'A number in the printed range could not be read safely, so no range was used. Check it against your original.',
   s_rangeAmbiguous: 'Several different ranges are printed for this test, so none was chosen. Ask your doctor which applies.',
+  s_limitValue: 'The report prints this value as a limit ({limit}), not an exact number, so it could not be compared with the printed range. Check it against your original.',
   s_photoNoValueMarker: 'No numeric value or range is shown. The {flag} verdict was read from the photo; check it against the original.',
   s_photoNoRangeMarker: 'No range is shown. The {flag} verdict was read from the photo; check it against the original.',
   s_photoRead: 'Read from a photo: check this row against your original.',
