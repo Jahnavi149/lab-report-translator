@@ -1,0 +1,13 @@
+.git
+.next
+.next-prod
+.vercel
+node_modules
+.env*
+eval/photos
+eval/.cache
+eval/report
+eval/phone-sim
+eval/redacted
+*.log
+*.tsbuildinfo
