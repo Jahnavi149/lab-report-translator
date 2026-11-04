@@ -127,7 +127,13 @@ body.contrast .flag.High, body.contrast .flag.Low { text-decoration: underline; 
 body.contrast button, body.contrast select, body.contrast .linkbtn, body.contrast input { background: #fff; color: #000; border: 2px solid #000; }
 body.contrast button.primary { background: #000; color: #fff; box-shadow: none; }
 body.contrast code { background: #fff; border: 1px solid #000; }
-@media print { .sheet-col { border: 1px solid #000; } html.large { font-size: 100%; } .print-only { display: inline; } }
+@media print {
+  /* Keep the final border inside the printable area so PDF/print rasterization does not clip it. */
+  .sheet-grid { width: calc(100% - 1px); }
+  .sheet-col { border: 1px solid #000; }
+  html.large { font-size: 100%; }
+  .print-only { display: inline; }
+}
 
 /* ---- Listen highlight, WhatsApp link, large-print family handout ---- */
 li.speaking { background: #fff3c4; outline: 3px solid #e0a800; border-radius: 8px; padding: 2px 8px; }
