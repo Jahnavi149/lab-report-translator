@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatRangeCompact, formatValue, questionsFor, summaryFor } from '@/lib/flags';
 import { flagLabel, uiFor } from '@/lib/i18n';
 import { appText, EN_APP, fill, localizeServerText } from '@/lib/i18n-app';
-import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types';
+import { LANGUAGES, LANGUAGE_NAME, type LabReport, type LabRow, type Language, type TranslatedReport } from '@/lib/types';
+import { NATIVE_NAME } from '@/lib/voice-text';
 import { cropImage, isImageFile, normalizeImage, type CropEdges } from '@/lib/clientImage';
 import { buildShareText, whatsappUrl } from '@/lib/share';
 import { AiSees } from './AiSees';
@@ -16,7 +17,8 @@ import { ReviewRowDialog } from './ReviewRowDialog';
 import { useVoiceAsk, VoiceButton, VoicePanel } from './VoiceAsk';
 import type { VoiceAction } from '@/lib/voice';
 
-const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी', tl: 'Tagalog', ms: 'Malay · Bahasa Melayu', ar: 'Arabic · العربية', fr: 'French · Français', de: 'German · Deutsch', pt: 'Portuguese · Português', id: 'Indonesian · Bahasa Indonesia' };
+/** "Telugu · తెలుగు" in the picker; just the one name when English and native are the same. */
+const LANG_LABEL = Object.fromEntries(LANGUAGES.map((l) => [l, LANGUAGE_NAME[l] === NATIVE_NAME[l] ? LANGUAGE_NAME[l] : `${LANGUAGE_NAME[l]} · ${NATIVE_NAME[l]}`])) as Record<Language, string>;
 const VOICE_LANG: Record<Language, string> = { en: 'en-US', te: 'te-IN', hi: 'hi-IN', es: 'es-ES', ta: 'ta-IN', kn: 'kn-IN', bn: 'bn-IN', mr: 'mr-IN', tl: 'fil-PH', ms: 'ms-MY', ar: 'ar-SA', fr: 'fr-FR', de: 'de-DE', pt: 'pt-BR', id: 'id-ID' };
 
 const rangeText = (r: LabRow, none: string) => formatRangeCompact(r.ref_low, r.ref_high, r.unit, none);
@@ -160,7 +162,7 @@ export default function Home() {
     let voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) { voices = await voicesReady(); if (token !== listenToken.current) return; }
     if (voices.length > 0 && !voices.some((v) => v.lang.toLowerCase().replace('_', '-').startsWith(lang.slice(0, 2).toLowerCase()))) {
-      setError(fill(EN_APP.noVoice, { language: LANG_LABEL[language].split(' · ').pop() ?? '' }));
+      setError(fill(EN_APP.noVoice, { language: NATIVE_NAME[language] }));
     }
     const finish = () => { if (token === listenToken.current) { onIndex(null); onDone(); } };
     const speakAt = (i: number) => {

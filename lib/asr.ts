@@ -1,11 +1,12 @@
 import { sanitizeTestName } from './safety';
+import { LANGUAGE_NAME } from './types';
 
 // Speech-to-text helpers for Muse Voice Transcribe. Pure code, no network: the one call to Meta lives in lib/muse.ts.
 //
 // AI transcribes, code decides: the transcript is only text. It goes through the same classifyVoiceQuestion keyword
 // matcher as typed or browser-recognised speech, so a mis-heard word can at worst produce the fixed redirect line.
 
-export const ASR_LANGUAGES = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' } as const;
+export const ASR_LANGUAGES = LANGUAGE_NAME;
 export type AsrLang = keyof typeof ASR_LANGUAGES;
 export const isAsrLang = (v: unknown): v is AsrLang => typeof v === 'string' && Object.prototype.hasOwnProperty.call(ASR_LANGUAGES, v);
 

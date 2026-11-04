@@ -7,7 +7,7 @@ import {
 } from './safety';
 import { ALIASES_EXTRA, DENY_EXTRA, DOCTOR_SHEET_EXTRA, EXPLAIN_EXTRA, HANDOUT_EXTRA, LANGUAGE_NAME_FORMS, NAV_VERB_EXTRA, ORDINALS_EXTRA, QUESTION_EXTRA, RESULTS_EXTRA, SUMMARY_EXTRA } from './voice-lang';
 import { NATIVE_NAME, VOICE_TEXT } from './voice-text';
-import type { Flag, Language, MuseSafeLine, MuseSafeRow } from './types';
+import { LANGUAGE_NAME, type Flag, type Language, type MuseSafeLine, type MuseSafeRow } from './types';
 
 // Voice Q&A: four guided intents, no open chat. AI explains, code decides.
 //
@@ -77,7 +77,7 @@ const NAV_TARGETS: { target: 'doctor-sheet' | 'handout'; re: RegExp; label: stri
 ];
 const RESULTS_RE = rx(String.raw`\b(back|return|results page|results screen|main page|volver a los resultados)\b|ఫలితాలకు|परिणामों|${RESULTS_EXTRA}`);
 const LANGUAGE_NAMES: { language: Language; name: string; re: RegExp }[] = (Object.keys(LANGUAGE_NAME_FORMS) as Language[]).map((language) => ({
-  language, name: { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' }[language], re: rx(LANGUAGE_NAME_FORMS[language]),
+  language, name: LANGUAGE_NAME[language], re: rx(LANGUAGE_NAME_FORMS[language]),
 }));
 
 // --- 3. Summary, doctor questions, test names ---------------------------------------------------------
@@ -176,7 +176,6 @@ function toSafeQuestion(spoken: string): MuseSafeLine | null {
 }
 
 // --- The Muse prompt -------------------------------------------------------------------------------------
-const LANG_NAMES: Record<VoiceLang, string> = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' };
 
 /** The constrained system prompt for the two intents where Muse writes the words. Never used for anything else. */
 function buildVoiceSystemPrompt(intent: 'explain-result' | 'explain-question', lang: VoiceLang): string {
@@ -187,7 +186,7 @@ function buildVoiceSystemPrompt(intent: 'explain-result' | 'explain-question', l
     : 'The data holds one doctor_question that a patient may ask their doctor. Say the same question again in simpler everyday words, as ONE question ending with a question mark. Keep the test name and the same numbers and add no new number. Do NOT answer it, do not say what the answer might be, and do not add advice or new questions.';
   const output = lang === 'en'
     ? 'Return ONLY JSON: {"english": "<the sentence>", "translated": null}.'
-    : `Return ONLY JSON: {"english": "<the sentence in English>", "translated": "<the same sentence in ${LANG_NAMES[lang]}>"}. In the translation keep the test name, the unit and every number exactly as in English, translate every other word (including "to", "lower" and "higher") into ${LANG_NAMES[lang]}, and add nothing.`;
+    : `Return ONLY JSON: {"english": "<the sentence in English>", "translated": "<the same sentence in ${LANGUAGE_NAME[lang]}>"}. In the translation keep the test name, the unit and every number exactly as in English, translate every other word (including "to", "lower" and "higher") into ${LANGUAGE_NAME[lang]}, and add nothing.`;
   return `${guard}${forbidden}${task} ${output}`;
 }
 

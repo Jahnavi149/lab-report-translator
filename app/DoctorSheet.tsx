@@ -1,9 +1,8 @@
 'use client';
 import { formatRangeCompact, formatValue } from '@/lib/flags';
 import { uiFor } from '@/lib/i18n';
+import { NATIVE_NAME } from '@/lib/voice-text';
 import type { LabReport, LabRow, Language } from '@/lib/types';
-
-const LANG_NAME: Record<Language, string> = { en: 'English', te: 'తెలుగు', hi: 'हिन्दी', es: 'Español', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', bn: 'বাংলা', mr: 'मराठी', tl: 'Tagalog', ms: 'Bahasa Melayu', ar: 'العربية', fr: 'Français', de: 'Deutsch', pt: 'Português', id: 'Bahasa Indonesia' };
 
 interface Props {
   report: LabReport;
@@ -62,7 +61,7 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
       <p className="lines fill" style={{marginBottom: '20px'}}>{ui.mainConcern} ________________________________________</p>
       <div className="sheet-grid">
         <div className="sheet-col">
-          <h3>{ui.forFamily(LANG_NAME[language])}</h3>
+          <h3>{ui.forFamily(NATIVE_NAME[language])}</h3>
           <ul>{summary.map((s, i) => <li key={i} dir="auto">{s}</li>)}</ul>
           <h3>{ui.questionsToAsk}</h3>
           <ol>{questions.map((q, i) => <li key={i} dir="auto">{q}</li>)}</ol>

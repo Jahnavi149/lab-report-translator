@@ -19,6 +19,8 @@ export interface ImageSourceBox {
 }
 
 export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'];
+/** The one table of language names in English: used in model prompts and for matching a spoken language name. */
+export const LANGUAGE_NAME: Record<Language, string> = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' };
 
 export interface LabRow {
   test_name: string;
