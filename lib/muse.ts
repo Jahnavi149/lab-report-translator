@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { cleanTranscript, languageBiasFor, type AsrLang } from './asr';
 import { hasNumberToken } from './verify';
 import { explanationIsSafe, questionIsSafe, sanitizeTestName, summaryIsSafe, translationIsSafe } from './safety';
 import { priorityRows } from './flags';
@@ -219,4 +221,37 @@ export async function extractFromImageWithMuse(photo: RedactedPhoto): Promise<Vi
     rows.push({ test_name: name, value, unit, ref_low: low, ref_high: high, source_text: source || `${name} ${value} ${unit}`.trim(), consistent });
   }
   return rows;
+}
+
+// 8. Hear: Muse Voice Transcribe turns one spoken question into text. It is a transcriber, not a decider: the text goes through the
+//    same keyword classifier (lib/voice.ts) as any other question, so a mis-heard word can at worst produce the redirect line.
+//    The audio is sent for transcription and is never written to disk by this app. It carries no report data, only the user's voice.
+const DEFAULT_ASR_URL = 'https://api.meta.ai/v1/asr/transcribe';
+const asrUrl = (): string => {
+  const chat = museApiUrl();
+  return chat.endsWith('/chat/completions') ? `${chat.slice(0, -'/chat/completions'.length)}/asr/transcribe` : DEFAULT_ASR_URL;
+};
+const asrModel = (): string => process.env.META_ASR_MODEL ?? 'muse-voice-transcribe-1.0';
+
+/**
+ * `wav` must already have passed checkWav (mono 16-bit PCM, 16 or 24 kHz). Returns the transcript, which may be empty if nobody spoke.
+ * Test names are sent as keywords for English only: measured on Telugu clips, English keywords pulled the words around them into
+ * Latin script ("నా" came back as "na" or "Now"), so Telugu, Hindi and Spanish questions are sent with the language bias alone.
+ */
+export async function transcribeWithMuse(wav: Uint8Array, lang: AsrLang, keywords: string[]): Promise<string> {
+  if (!museConfigured()) throw new Error('Muse is not configured');
+  const form = new FormData();
+  form.append('request', new Blob([JSON.stringify({
+    model: asrModel(), mode: 'PUSH_TO_TALK', audioEncoding: 'WAV', languageBias: languageBiasFor(lang),
+    ...(lang === 'en' && keywords.length ? { keywords } : {}),
+  })], { type: 'application/json' }));
+  form.append('audio', new Blob([wav], { type: 'audio/wav' }), 'question.wav');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(`${asrUrl()}?sessionId=${randomUUID()}`, { method: 'POST', headers: { Authorization: `Bearer ${museApiKey()}` }, body: form, signal: controller.signal });
+    if (!res.ok) throw new Error(`Muse Voice Transcribe ${res.status}`);
+    const data = await res.json() as { transcript?: unknown };
+    return cleanTranscript(data.transcript);
+  } finally { clearTimeout(timer); }
 }

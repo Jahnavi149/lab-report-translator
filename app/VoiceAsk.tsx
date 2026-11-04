@@ -3,13 +3,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Ui } from '@/lib/i18n';
 import type { LabReport, Language, VoiceExchange } from '@/lib/types';
 import type { VoiceAction, VoiceResult } from '@/lib/voice';
+import { canRecord, startRecording, type Recorder } from './recorder';
 
-// Voice Q&A on the results page. Input is the browser's own speech recognition (webkitSpeechRecognition, with the
-// standard SpeechRecognition as a fallback); output is the page's existing speakItems pipeline, so voice selection per
-// language is exactly what Listen mode does. The question goes to /api/voice-ask, where code picks one of four intents,
-// Muse writes the words inside two of them, and lib/safety.ts checks every answer before it comes back here.
+// Voice Q&A on the results page. Hearing: Muse Voice Transcribe (app/recorder.ts records one short question, /api/transcribe
+// turns it into text). If that is unavailable (no microphone API, or the service failed once), the browser's own speech
+// recognition (webkitSpeechRecognition, standard SpeechRecognition as a fallback) is used instead. Speaking: the page's
+// existing speakItems pipeline, so voice selection per language is exactly what Listen mode does.
+// The text goes to /api/voice-ask, where code picks one of four intents, Muse writes the words inside two of them, and
+// lib/safety.ts checks every answer before it comes back here. The transcript is only text: a mis-heard word can at worst
+// produce the fixed redirect line.
 //
-// Nothing here can break the page: with no recognition support, no microphone, an unsupported language or no API key,
+// Nothing here can break the page: with no way to listen, no microphone, an unsupported language or no API key,
 // the button shows a plain message and disables itself, and everything else keeps working.
 
 interface RecResult { isFinal: boolean; 0?: { transcript: string } }
@@ -65,11 +69,13 @@ export function useVoiceAsk(o: VoiceAskOptions): VoiceAsk {
   const [supported, setSupported] = useState(true);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [blocked, setBlocked] = useState(false);
-  const recRef = useRef<Rec | null>(null);
+  const recRef = useRef<Rec | null>(null);      // browser speech recognition (fallback)
+  const micRef = useRef<Recorder | null>(null); // microphone recording for Muse Voice Transcribe
+  const museFailed = useRef(false);             // after a failed transcription the browser's recognition takes over
   const live = useRef(o);
   live.current = o;
 
-  useEffect(() => { setSupported(recognitionCtor() !== null); }, []);
+  useEffect(() => { setSupported(canRecord() || recognitionCtor() !== null); }, []);
   // Is a Muse key configured on the server? (Asked once; a failed request just leaves the mic enabled.)
   useEffect(() => {
     let cancelled = false;
@@ -79,9 +85,10 @@ export function useVoiceAsk(o: VoiceAskOptions): VoiceAsk {
   // A new or cleared report starts a clean conversation.
   useEffect(() => {
     recRef.current?.abort(); recRef.current = null;
+    const mic = micRef.current; micRef.current = null; mic?.stop();
     setState('idle'); setTranscript(''); setAnswer(null); setMessage(''); setExchanges([]);
   }, [o.report]);
-  useEffect(() => () => { recRef.current?.abort(); }, []);
+  useEffect(() => () => { recRef.current?.abort(); const mic = micRef.current; micRef.current = null; mic?.stop(); }, []);
 
   const disabledReason: string | null = !supported ? o.ui.micUnsupported
     : available === false ? o.ui.micNoKey
@@ -122,7 +129,51 @@ export function useVoiceAsk(o: VoiceAskOptions): VoiceAsk {
     }
   }, []);
 
-  const start = useCallback(() => {
+  /** Muse Voice Transcribe: record one question, send it for transcription, then ask exactly as if it had been typed. */
+  const startMuse = useCallback(async () => {
+    const { ui, language, report, stopSpeaking } = live.current;
+    stopSpeaking();
+    setTranscript(''); setAnswer(null); setMessage('');
+    setState('listening');
+    let rec: Recorder;
+    try { rec = await startRecording(); } catch (e) {
+      const name = e instanceof DOMException ? e.name : '';
+      if (name === 'NotAllowedError' || name === 'SecurityError' || name === 'NotFoundError') setBlocked(true); else setMessage(ui.micError);
+      setState('idle');
+      return;
+    }
+    micRef.current = rec;
+    const { wav } = await rec.done;
+    if (micRef.current !== rec) return; // a new report, or leaving the page, ended this recording
+    micRef.current = null;
+    if (!wav) { setMessage(ui.micNoSpeech); setState('idle'); return; }
+    setState('thinking');
+    try {
+      const names = (report?.ai_input?.rows ?? report?.rows ?? []).map((r) => r.test_name);
+      const form = new FormData();
+      form.append('lang', language);
+      form.append('keywords', JSON.stringify(names));
+      form.append('audio', wav, 'question.wav');
+      const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 503 || res.status === 501) setAvailable(false); else museFailed.current = recognitionCtor() !== null;
+        setMessage(typeof data?.error === 'string' ? data.error : ui.micError);
+        setState('idle');
+        return;
+      }
+      const said = typeof data?.transcript === 'string' ? data.transcript.trim() : '';
+      if (!said) { setMessage(ui.micNoSpeech); setState('idle'); return; }
+      setTranscript(said);
+      void ask(said);
+    } catch {
+      museFailed.current = recognitionCtor() !== null; // only fall back when the browser can recognise speech itself
+      setMessage(live.current.ui.micError);
+      setState('idle');
+    }
+  }, [ask]);
+
+  const startBrowser = useCallback(() => {
     const Ctor = recognitionCtor();
     const { ui, voiceLang, stopSpeaking } = live.current;
     if (!Ctor) { setSupported(false); return; }
@@ -154,9 +205,15 @@ export function useVoiceAsk(o: VoiceAskOptions): VoiceAsk {
     try { rec.start(); } catch { recRef.current = null; setMessage(ui.micError); setState('idle'); }
   }, [ask]);
 
+  /** Muse Voice Transcribe whenever it can be used; the browser's own recognition otherwise. */
+  const start = useCallback(() => {
+    if (canRecord() && available !== false && !museFailed.current) void startMuse();
+    else startBrowser();
+  }, [available, startMuse, startBrowser]);
+
   const toggle = useCallback(() => {
     if (disabledReason) return;
-    if (state === 'listening') { recRef.current?.stop(); return; }
+    if (state === 'listening') { micRef.current?.stop(); recRef.current?.stop(); return; }
     if (state === 'speaking') { live.current.stopSpeaking(); setState('idle'); return; }
     if (state === 'thinking') return;
     start();
