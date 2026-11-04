@@ -10,10 +10,17 @@ import { verdictAppears } from './flags';
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 const withCommas = (n: number) => (Number.isInteger(n) ? n.toLocaleString('en-US') : String(n));
 
-/** Does `n` appear as a standalone number in `text` (with or without thousands separators)? */
+/** The ways a number can be printed: dot or comma decimals, and thousands grouped by comma, dot or a space. */
+function printedForms(n: number): string[] {
+  const plain = [String(n), n.toFixed(1), n.toFixed(2), n.toFixed(3)].filter((f) => Number(f) === n);
+  const forms = new Set<string>([...plain, ...plain.map((f) => f.replace('.', ','))]);
+  if (Number.isInteger(n) && n >= 1000) { forms.add(withCommas(n)); forms.add(withCommas(n).replace(/,/g, '.')); forms.add(withCommas(n).replace(/,/g, ' ')); }
+  return [...forms];
+}
+
+/** Does `n` appear as a standalone number in `text` (with or without thousands separators, decimal dot or comma)? */
 export function hasNumberToken(text: string, n: number): boolean {
-  const forms = new Set([String(n), withCommas(n), n.toFixed(1), n.toFixed(2)].filter((f) => Number(f.replace(/,/g, '')) === n));
-  return [...forms].some((f) => new RegExp(`(?<![\\d.,])${esc(f)}(?![\\d]|[.,]\\d)`).test(text));
+  return printedForms(n).some((f) => new RegExp(`(?<![\\d.,])${esc(f)}(?![\\d]|[.,]\\d)`).test(text));
 }
 
 function verifyRow(row: LabRow, normalizedSource: string): string | null {

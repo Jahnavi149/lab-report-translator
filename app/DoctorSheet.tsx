@@ -1,9 +1,8 @@
 'use client';
 import { formatRangeCompact, formatValue } from '@/lib/flags';
 import { uiFor } from '@/lib/i18n';
+import { NATIVE_NAME } from '@/lib/voice-text';
 import type { LabReport, LabRow, Language } from '@/lib/types';
-
-const LANG_NAME: Record<Language, string> = { en: 'English', te: 'తెలుగు', hi: 'हिन्दी', es: 'Español', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', bn: 'বাংলা', mr: 'मराठी' };
 
 interface Props {
   report: LabReport;
@@ -52,7 +51,7 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
         <button className="primary" onClick={() => printDoctorSheet(testDate)}>🖨 {ui.printBtn}</button>
         <button onClick={onClear}>{ui.clearBtn}</button>
       </div>
-      <div className="sheet-banner no-print" style={{ marginTop:'20px' }}><strong>Doctor sheet</strong><br />{ui.sheetBanner}</div>
+      <div className="sheet-banner no-print" style={{ marginTop:'20px' }}><strong>{ui.doctorSheetBtn}</strong><br />{ui.sheetBanner}</div>
       <h2 style={{ marginTop: 18 }}>{report.title}</h2>
       <p className="lines fill">
         <label htmlFor="test-date">{ui.testDate}</label>{' '}
@@ -62,12 +61,12 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
       <p className="lines fill" style={{marginBottom: '20px'}}>{ui.mainConcern} ________________________________________</p>
       <div className="sheet-grid">
         <div className="sheet-col">
-          <h3>{ui.forFamily(LANG_NAME[language])}</h3>
-          <ul>{summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          <h3>{ui.forFamily(NATIVE_NAME[language])}</h3>
+          <ul>{summary.map((s, i) => <li key={i} dir="auto">{s}</li>)}</ul>
           <h3>{ui.questionsToAsk}</h3>
-          <ol>{questions.map((q, i) => <li key={i}>{q}</li>)}</ol>
+          <ol>{questions.map((q, i) => <li key={i} dir="auto">{q}</li>)}</ol>
         </div>
-        <div className="sheet-col">
+        <div className="sheet-col" dir="ltr" lang="en">
           <h3>For the doctor (English)</h3>
           <p className="muted small trust-note">
             {report.source_kind === 'photo'
@@ -85,7 +84,7 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
             {flagged.length === 0 && <li>No values outside a printed range.</li>}
           </ul>
           <h3>Questions (English)</h3>
-          <ol>{report.questions.map((q, i) => <li key={i}>{q}</li>)}</ol>
+          <ol>{report.questions.map((q, i) => <li key={i} dir="auto">{q}</li>)}</ol>
         </div>
       </div>
       <h3>{ui.checklist}</h3>

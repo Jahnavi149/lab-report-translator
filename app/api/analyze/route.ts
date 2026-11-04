@@ -22,7 +22,7 @@ const citationBox = (test_name: string, r: { value: number | null; unit: string;
   return box ? { source_box: box } : {};
 };
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
-const normalizeLine = (line: string) => line.trim().replace(/[â€“â€”âˆ’]/g, '-').replace(/\s+/g, ' ');
+const normalizeLine = (line: string) => line.trim().replace(/[\u2013\u2014\u2212]/g, '-').replace(/\s+/g, ' ');
 
 // Trust file contents, not the filename or the declared MIME type.
 function sniff(buf: Buffer): 'pdf' | 'png' | 'jpeg' | 'webp' | null {

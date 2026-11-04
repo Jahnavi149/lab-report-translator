@@ -86,6 +86,68 @@ check('qualified result is reported as skipped', qualified.skipped.length === 1)
 const dup = parseLabText('Hemoglobin 11.2 g/dL 12.0-15.5\nHemoglobin 11.4 g/dL 12.0-15.5');
 eq('duplicate test names get unique keys', dup.map((r) => r.test_name), ['Hemoglobin', 'Hemoglobin (2)']);
 
+
+// ------------------------------------------------------------------------------------------------
+group('Decimal-comma reports: French, German, Portuguese, Indonesian, Spanish (and English unchanged)');
+const LOCAL = {
+  fr: { head: 'Nom : Dupont Marie\nDate de naissance : 04/05/1978\nN° de sécurité sociale 2 78 05 75 116 042 12\nTéléphone : 01 42 68 53 00\nMédecin prescripteur : Dr Martin\n',
+    body: 'Hémoglobine 11,2 g/dL 12,0 - 15,5\nGlycémie à jeun 0,92 g/L 0,70 - 1,10\nPlaquettes 250 000 /mm3 150 000 - 400 000\nCholestérol total 2,30 g/L inférieur à 2,00\nLeucocytes 6,5 G/L 4,0 à 10,0\nFerritine 22 ng/mL',
+    want: [[11.2, 12, 15.5, 'Low'], [0.92, 0.7, 1.1, 'Normal'], [250000, 150000, 400000, 'Normal'], [2.3, null, 2, 'High'], [6.5, 4, 10, 'Normal'], [22, null, null, 'Unknown']], pii: ['Dupont', '04/05/1978', '116 042', '42 68 53', 'Martin'] },
+  de: { head: 'Name: Anna Schmidt\nGeburtsdatum: 04.05.1978\nVersichertennummer: A123456789\nTelefon: 030 1234567\nBehandelnder Arzt: Dr. Müller\n',
+    body: 'Hämoglobin 11,2 g/dl 12,0 - 15,5\nGlukose nüchtern 92 mg/dl 70 - 99\nThrombozyten 250.000 /µl 150.000 - 400.000\nLeukozyten 6,5 Tsd/µl 3,4 - 10,8\nCholesterin gesamt 230 mg/dl bis 200 H\nFerritin 22 ng/ml',
+    want: [[11.2, 12, 15.5, 'Low'], [92, 70, 99, 'Normal'], [250000, 150000, 400000, 'Normal'], [6.5, 3.4, 10.8, 'Normal'], [230, null, 200, 'High'], [22, null, null, 'Unknown']], pii: ['Schmidt', '04.05.1978', 'A123456789', '1234567', 'Müller'] },
+  pt: { head: 'Nome: Maria Silva\nData de nascimento: 04/05/1978\nCPF: 123.456.789-09\nTelefone: (11) 91234-5678\nMédico solicitante: Dr. Souza\n',
+    body: 'Hemoglobina 11,2 g/dL 12,0 a 15,5\nGlicose em jejum 92 mg/dL 70 a 99\nPlaquetas 250.000 /mm3 150.000 a 450.000\nColesterol total 230 mg/dL até 190 A\nLeucócitos 6,5 mil/mm3 4,0 a 10,0\nFerritina 22 ng/mL',
+    want: [[11.2, 12, 15.5, 'Low'], [92, 70, 99, 'Normal'], [250000, 150000, 450000, 'Normal'], [230, null, 190, 'High'], [6.5, 4, 10, 'Normal'], [22, null, null, 'Unknown']], pii: ['Silva', '04/05/1978', '123.456.789', '91234', 'Souza'] },
+  id: { head: 'Nama: Siti Rahma\nTanggal lahir: 04/05/1978\nNIK: 3171234567890001\nTelepon: 0812-3456-7890\nDokter pengirim: Dr. Budi\n',
+    body: 'Hemoglobin 11,2 g/dL 12,0 - 15,5\nGlukosa puasa 92 mg/dL 70 - 99\nTrombosit 250.000 /uL 150.000 - 400.000\nKolesterol total 230 mg/dL kurang dari 200 Tinggi\nLeukosit 6,5 ribu/uL 4,0 sampai 10,0\nFerritin 22 ng/mL',
+    want: [[11.2, 12, 15.5, 'Low'], [92, 70, 99, 'Normal'], [250000, 150000, 400000, 'Normal'], [230, null, 200, 'High'], [6.5, 4, 10, 'Normal'], [22, null, null, 'Unknown']], pii: ['Rahma', '04/05/1978', '3171234567890001', '3456-7890', 'Budi'] },
+  es: { head: 'Nombre: Ana López\nFecha de nacimiento: 04/05/1978\nDNI: 12345678Z\nTeléfono: 612 345 678\nMédico solicitante: Dr. Ruiz\n',
+    body: 'Hemoglobina 11,2 g/dL 12,0 - 15,5\nGlucosa en ayunas 92 mg/dL 70 - 99\nPlaquetas 250.000 /mm3 150.000 - 400.000\nColesterol total 230 mg/dL menos de 200\nLeucocitos 6,5 x10E3/uL 4,0 a 10,0\nFerritina 22 ng/mL',
+    want: [[11.2, 12, 15.5, 'Low'], [92, 70, 99, 'Normal'], [250000, 150000, 400000, 'Normal'], [230, null, 200, 'High'], [6.5, 4, 10, 'Normal'], [22, null, null, 'Unknown']], pii: ['López', '04/05/1978', '12345678Z', '345 678', 'Ruiz'] },
+};
+for (const [lang, L] of Object.entries(LOCAL)) {
+  const full = L.head + L.body;
+  const res = parseLabTextDetailed(full);
+  const got = res.rows.map((r) => [r.value, r.ref_low, r.ref_high, r.flag]);
+  eq(`${lang}: every result is read with the right value, range and flag (decimal comma, dot or space thousands)`, got, L.want);
+  check(`${lang}: nothing is skipped and no header line becomes a result`, res.skipped.length === 0 && res.rows.length === L.want.length, JSON.stringify(res.skipped));
+  const ver = verifyRows(res.rows, full);
+  check(`${lang}: the verifier confirms every number on its printed line`, ver.passed, ver.note);
+  const redactedLocal = safety.redactForMuse(full);
+  check(`${lang}: patient name, birth date, ID, phone and doctor are removed, and the lab values and ranges stay intact`, L.pii.every((p) => !redactedLocal.includes(p)) && /11,2/.test(redactedLocal) && !redactedLocal.includes('[number]'), redactedLocal);
+}
+// Convention is decided per report, never guessed per number.
+eq('English "1,230" stays one thousand two hundred thirty', one('Glucose 1,230 mg/dL 70-99').value, 1230);
+eq('English decimal point is unchanged', one('Hemoglobin 11.2 g/dL 12.0-15.5').value, 11.2);
+eq('a report that uses decimal commas reads "1,5" as 1.5', one('Hemoglobina 1,5 g/dL 0,5 - 2,0').value, 1.5);
+eq('a lone "1,234" with no other evidence defaults to the English reading', one('Glucose 1,234 mg/dL 70-99').value, 1234);
+eq('"1.234,5" is one thousand two hundred thirty-four and a half', one('Glukose 1.234,5 mg/dl 70 - 99').value, 1234.5);
+eq('"1,234.5" is the same number in the English style', one('Glucose 1,234.5 mg/dL 70-99').value, 1234.5);
+const badNums = parseLabTextDetailed('Hämoglobin 11,2 g/dl 12,0 - 15,5\nGlukose 1,23,4 mg/dl 70 - 99\nKalium 4.5.6 mmol/l 3,5 - 5,1');
+eq('a malformed number is never guessed: that row is skipped or marked unreadable, the good row stays', [badNums.rows.some((r) => r.test_name === 'Hämoglobin' && r.value === 11.2), badNums.rows.some((r) => r.value === 123.4 || r.value === 1234 || r.value === 4.56)], [true, false]);
+check('a number printed with a comma is accepted by the verifier as the source form of its value', hasNumberToken('Hemoglobina 11,2 g/dL', 11.2) && hasNumberToken('Plaquettes 250 000 /mm3', 250000) && hasNumberToken('Thrombozyten 250.000 /µl', 250000) && !hasNumberToken('Hämoglobin 11,25 g/dl', 11.2) && !hasNumberToken('Hämoglobin 111,2 g/dl', 11.2));
+
+// A real PDF built with each language's characters (WinAnsi), read through the same PDF path as an upload.
+const winAnsiPdf = (lines) => {
+  const esc2 = (s) => s.replace(/[\\()]/g, '\\$&');
+  const stream = lines.map((l, i) => `BT /F1 11 Tf 50 ${740 - i * 22} Td (${esc2(l)}) Tj ET`).join('\n');
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\nstream\n${stream}\nendstream`, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'];
+  let pdf = '%PDF-1.4\n'; const offs = [];
+  objs.forEach((o, i) => { offs.push(Buffer.byteLength(pdf, 'latin1')); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xr = Buffer.byteLength(pdf, 'latin1');
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
+  return Buffer.from(pdf, 'latin1');
+};
+for (const [lang, L] of Object.entries(LOCAL)) {
+  const realLog = console.log, realWarn = console.warn;
+  console.log = () => {}; console.warn = () => {};
+  let t2; try { t2 = await extractPdfText(winAnsiPdf((L.head + L.body).split('\n'))); } finally { console.log = realLog; console.warn = realWarn; }
+  const r2 = parseLabTextDetailed(t2);
+  eq(`${lang}: a PDF of this report in its own language reads to the same results`, r2.rows.map((r) => [r.value, r.ref_low, r.ref_high, r.flag]), L.want);
+}
+
 // ------------------------------------------------------------------------------------------------
 group('Verifier (per row, honest)');
 const src = 'Glucose 1,230 mg/dL 70-99 H\nHemoglobin 11.2 g/dL 12.0 - 15.5\nPage 6';
@@ -206,8 +268,16 @@ check('verdict-only templates say the value was not shown and never print "null"
 
 // ------------------------------------------------------------------------------------------------
 group('Localized interface, sharing and handout');
+{
+  const { LANGUAGES } = load('types');
+  const pkgDesc = JSON.parse(readFileSync('package.json', 'utf8')).description;
+  const docs = ['README.md', 'docs/languages.md', 'docs/voice.md'].map((f) => readFileSync(f, 'utf8')).join('\n');
+  const stale = /\b(nine|eleven|ten|9|11|10)[ -]+(other )?(interface )?languages\b/i.test(docs + pkgDesc);
+  const distinctUi = new Set(LANGUAGES.map((l) => i18n.uiFor(l).heroTitleA)).size;
+  check('the language count stated in the README, docs and package description is the real one (15 languages, 15 different interfaces)', LANGUAGES.length === 15 && distinctUi === 15 && !stale && /15 languages/.test(readFileSync('README.md', 'utf8')) && /fifteen languages/.test(pkgDesc));
+}
 const enUi = i18n.uiFor('en');
-for (const lang of ['te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr']) {
+for (const lang of ['te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id']) {
   const u = i18n.uiFor(lang);
   const keys = Object.keys(enUi);
   check(`${lang}: every interface string exists`, keys.every((k) => (Array.isArray(enUi[k]) ? Array.isArray(u[k]) && u[k].length === enUi[k].length && u[k].every(Boolean) : typeof u[k] === typeof enUi[k] && (typeof u[k] !== 'string' || u[k].length > 0))));
@@ -215,7 +285,7 @@ for (const lang of ['te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr']) {
   check(`${lang}: the "does NOT mean" safety box keeps its meaning (non-empty, differs from English)`, u.notMeanBody.length > 40 && u.notMeanTitle !== enUi.notMeanTitle);
 }
 const tmix = SAMPLES.find((x) => x.id === 'mixed-abnormal');
-for (const lang of ['en', 'te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr']) {
+for (const lang of ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id']) {
   const sum = tmix.summary;
   const qs = tmix.questions;
   const text = share.buildShareText({ title: tmix.title, summary: sum, questions: qs, questionsHeading: i18n.uiFor(lang).questionsToAsk, disclaimer: i18n.uiFor(lang).infoOnly, synthetic: true });
@@ -578,6 +648,25 @@ const HARD_PII = [
   ['ಹೆಸರು: ರಾಹುಲ್', ['ರಾಹುಲ್']],
   ['പേര്: രാഹുൽ', ['രാഹുൽ']],
   ['নাম: রাহুল', ['রাহুল']],
+  ['Nama: Ahmad bin Ismail', ['Ahmad', 'Ismail']],
+  ['Tarikh Lahir: 14/03/1987', ['1987']],
+  ['No. Telefon: 012-3456789', ['3456789']],
+  ['No. KP: 870314-14-5678', ['870314']],
+  ['Alamat: Jalan Ampang 12', ['Ampang']],
+  ['Doktor: Dr Lim Wei', ['Lim']],
+  ['Pangalan: Juan dela Cruz', ['Juan', 'Cruz']],
+  ['Petsa ng Kapanganakan: 03/14/1987', ['1987']],
+  ['Telepono: 0917 123 4567', ['123 4567']],
+  ['Tirahan: Rizal Avenue 12', ['Rizal']],
+  ['الاسم: أحمد محمد', ['أحمد', 'محمد']],
+  ['اسم المريض: فاطمة علي', ['فاطمة']],
+  ['تاريخ الميلاد: ١٤/٠٣/١٩٨٧', ['١٩٨٧', '1987']],
+  ['رقم الهاتف: ٠٥٠١٢٣٤٥٦٧', ['٠٥٠١٢٣٤٥٦٧', '0501234567']],
+  ['رقم الهوية: ١٠٨٧٦٥٤٣٢١', ['١٠٨٧٦٥٤٣٢١']],
+  ['العنوان: شارع الملك فهد', ['فهد']],
+  ['الطبيب: د. خالد', ['خالد']],
+  ['الْاِسْمُ: سارة', ['سارة']],
+  ['Hemoglobin 11.2 g/dL 12.0 - 15.5 هاتف ٠٥٠١٢٣٤٥٦٧٨', ['٠٥٠١٢٣٤٥٦٧٨', '05012345678']],
   ['P a t i e n t  N a m e : Rahul Sharma', ['Rahul', 'Sharma']],
   ['D O B : 14 / 03 / 1987', ['1987']],
   ['Patient\u200b Name: Rahul Sharma', ['Rahul']],
@@ -935,8 +1024,8 @@ check('no API key: explain intents fail rather than answer', threw);
 const okBody = { question: 'what does my hemoglobin mean', lang: 'en', rows: mixed.rows.map((x) => ({ test_name: x.test_name, value: x.value, unit: x.unit, ref_low: x.ref_low, ref_high: x.ref_high, flag: x.flag })), summary: mixed.summary, questions: mixed.questions };
 check('a well-formed request is accepted', voice.parseVoiceRequest(okBody).ok);
 const badReq = (patch) => !voice.parseVoiceRequest({ ...okBody, ...patch }).ok;
-check('bad requests are refused with a plain message', badReq({ question: '' }) && badReq({ question: 'x'.repeat(301) }) && badReq({ question: 5 }) && badReq({ lang: 'fr' }) && badReq({ lang: 'ta' }) && badReq({ rows: [] }) && badReq({ rows: 'x' }) && badReq({ rows: [{ test_name: 'a' }] }) && badReq({ summary: 'x' }) && badReq({ questions: [1] }) && !voice.parseVoiceRequest(null).ok);
-check('every refusal message is human-readable', [{ ...okBody, question: '' }, { ...okBody, lang: 'fr' }, { ...okBody, rows: [] }].every((b) => { const p = voice.parseVoiceRequest(b); return !p.ok && /^[A-Z].*\.$/.test(p.error); }));
+check('bad requests are refused with a plain message', badReq({ question: '' }) && badReq({ question: 'x'.repeat(301) }) && badReq({ question: 5 }) && badReq({ lang: 'ja' }) && badReq({ lang: 'zh' }) && badReq({ lang: '' }) && badReq({ rows: [] }) && badReq({ rows: 'x' }) && badReq({ rows: [{ test_name: 'a' }] }) && badReq({ summary: 'x' }) && badReq({ questions: [1] }) && !voice.parseVoiceRequest(null).ok);
+check('every refusal message is human-readable', [{ ...okBody, question: '' }, { ...okBody, lang: 'ja' }, { ...okBody, rows: [] }].every((b) => { const p = voice.parseVoiceRequest(b); return !p.ok && /^[A-Z].*\.$/.test(p.error); }));
 const lied = voice.parseVoiceRequest({ ...okBody, rows: [{ test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Normal' }, { test_name: 'MRN 00481516', value: 5, unit: '', ref_low: null, ref_high: null, flag: 'Normal' }] });
 check('the flag is recomputed from the printed range (a lie is corrected) and an identifier-like test name is dropped', lied.ok && lied.req.rows.length === 1 && lied.req.rows[0].flag === 'Low');
 check('the voice route is typed like every other Muse call: raw strings and raw rows do not compile', readFileSync('lib/privacy.typecheck.ts', 'utf8').includes('answerVoiceWithMuse'));
@@ -959,8 +1048,8 @@ for (const [what, wav] of [['stereo', wavOf(2000, { channels: 2 })], ['8-bit', w
   check(`a ${what} recording is refused before anything is sent, with a plain message`, !c.ok && /^[A-Z].*\.$/.test(c.error), JSON.stringify(c));
 }
 check('the page records at most 15 s, well inside the server ceiling', asr.MAX_AUDIO_MS === 20000 && asr.MAX_AUDIO_BYTES >= 20000 * 32 && /MAX_MS = 15000/.test(readFileSync('app/recorder.ts', 'utf8')));
-eq('language bias: exactly the user\u2019s language (adding English made Telugu worse)', [asr.languageBiasFor('en'), asr.languageBiasFor('te'), asr.languageBiasFor('hi'), asr.languageBiasFor('es')], [['English'], ['Telugu'], ['Hindi'], ['Spanish']]);
-check('only the four voice languages are accepted', ['en', 'te', 'hi', 'es'].every(asr.isAsrLang) && !['ta', 'fr', '', 5, null].some(asr.isAsrLang));
+eq('language bias: exactly the user\u2019s language (adding English made Telugu worse)', ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'].map((l) => asr.languageBiasFor(l)), [['English'], ['Telugu'], ['Hindi'], ['Spanish'], ['Tamil'], ['Kannada'], ['Bengali'], ['Marathi'], ['Tagalog'], ['Malay'], ['Arabic'], ['French'], ['German'], ['Portuguese'], ['Indonesian']]);
+check('all fifteen interface languages are accepted for voice (every one is on the transcriber\u2019s own list), and nothing else', ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'].every(asr.isAsrLang) && !['zh', 'ml', 'ja', '', 5, null].some(asr.isAsrLang) && Object.keys(asr.ASR_LANGUAGES).length === 15);
 eq('keywords are cleaned test names: no symbols, no long digit strings, no duplicates', asr.cleanKeywords(['Hemoglobin', 'Hemoglobin', 'LDL (calc) <script>', 'MRN 00481516', 42, 'x']), ['Hemoglobin', 'LDL (calc) script']);
 check('at most 40 keywords', asr.cleanKeywords(Array.from({ length: 100 }, (_, i) => `Test ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26))}`)).length <= 40 && asr.cleanKeywords('nope').length === 0);
 eq('a transcript is one short line of plain text', [asr.cleanTranscript('  what does\n my  hemoglobin <|speech_endpoint|> mean? '), asr.cleanTranscript(5), asr.cleanTranscript('x'.repeat(500)).length], ['what does my hemoglobin mean?', '', 300]);
@@ -997,14 +1086,126 @@ check('words heard by the transcriber get no extra trust: advice and injections 
 const heardNames = classify(asr.cleanTranscript('నా హిమోగ్లోబిన్ అంటే ఏమిటి?'));
 check('a Telugu transcript is classified by the same matcher as typed text', heardNames.intent === 'explain-result' && heardNames.matches[0].test_name === 'Hemoglobin');
 
+// --- 9. Every interface language works by voice: same four intents, same redirect, fixed lines written by code in the user's language ---
+const ALL = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'];
+const vt = load('voice-text');
+// [intent, phrase, note]. "heard" = real Muse Voice Transcribe output on synthetic speech (including its mistakes); the rest were written by hand.
+const BY_LANG = {
+  ta: [['read-summary', 'சுறுக்கட்டை சொல்லு.!', 'heard'], ['explain-result', 'என்ஹீமோகுளோபின் என்றால் என்ன?', 'heard'], ['navigate', 'டாக்டர் ஷீட்கார்ட்,.', 'heard'], ['read-summary', 'சுருக்கட்டை சொல்!', 'heard'], ['explain-result', 'En colesterol', 'heard'], ['explain-question', 'இரண்டாவது கேள்வியின் அர்த்தம் என்ன'], ['navigate', 'தெலுங்குக்கு மாற்று'], ['other', 'நான் இரும்பு மாத்திரை சாப்பிடலாமா'], ['other', 'என் ஹீமோகுளோபின் ஆபத்தா'], ['other', 'ஹீமோகுளோபினை எப்படி அதிகரிக்க']],
+  kn: [['explain-result', 'ನನ್ನ ಹಿಮೋಗ್ಲೋಬಿನ್ ಅಂದರೆ ಏನು?', 'heard'], ['navigate', 'ಡಾ. ಶೀತ್ ತೋರಿಸಿ.', 'heard'], ['read-summary', 'ಸಾರಾಂಶ ಹೇಳಿ.', 'heard'], ['explain-question', 'ಎರಡನೇ ಪ್ರಶ್ನೆಯ ಅರ್ಥ ಹೇಳಿ'], ['navigate', 'ಹಿಂದಿಗೆ ಬದಲಿಸಿ'], ['other', 'ನಾನು ಕಬ್ಬಿಣದ ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಬೇಕೇ'], ['other', 'ನನ್ನ ಹಿಮೋಗ್ಲೋಬಿನ್ ಅಪಾಯವೇ'], ['other', 'ನನಗೆ ಮಧುಮೇಹ ಇದೆಯೇ']],
+  tl: [['explain-result', 'Ano ang ibig sabihin ng hemoglobin ko?'], ['explain-result', 'Ipaliwanag ang kolesterol ko'], ['read-summary', 'Basahin mo ang buod'], ['navigate', 'Ipakita ang sheet para sa doktor'], ['navigate', 'Buksan ang malaking print'], ['explain-question', 'Ipaliwanag ang pangalawang tanong'], ['navigate', 'Palitan sa Ingles'], ['other', 'Dapat ba akong uminom ng iron tablets'], ['other', 'Delikado ba ang hemoglobin ko'], ['other', 'Mayroon ba akong diabetes'], ['other', 'Paano ko mapapataas ang hemoglobin ko'], ['other', 'Ano ang gagawin ko sa mababang hemoglobin']],
+  ms: [['explain-result', 'Apakah maksud hemoglobin saya?', 'heard'], ['navigate', 'tunjukkan helayan doktor.', 'heard'], ['explain-question', 'terangkan soalan kedua..', 'heard'], ['read-summary', 'bacakan ringkasan saya,.', 'heard'], ['other', 'patutkah saya saya makan pil zat besi..!', 'heard'], ['explain-result', 'Berapakah kolesterol saya?.', 'heard'], ['explain-result', 'Terangkan kolesterol saya'], ['read-summary', 'Bacakan ringkasan saya'], ['navigate', 'Tunjukkan helaian doktor'], ['navigate', 'Buka cetakan besar'], ['explain-question', 'Terangkan soalan kedua'], ['navigate', 'Tukar ke bahasa Inggeris'], ['other', 'Patutkah saya makan pil zat besi'], ['other', 'Adakah hemoglobin saya berbahaya'], ['other', 'Adakah saya menghidap kencing manis'], ['other', 'Macam mana nak naikkan hemoglobin saya']],
+  ar: [['explain-result', 'ما بايعني يعني الموجلوبين اللدي؟.', 'heard'], ['explain-result', 'ما هو الكولايسترول عندي?', 'heard'], ['read-summary', 'اقرأ للملخص.', 'heard'], ['navigate', 'اعرضي ورقة الطبيب.', 'heard'], ['other', 'هل اتناول حبوب الحديد؟.', 'heard'], ['explain-result', 'ماذا يعني الهيموجلوبين لدي؟'], ['explain-result', 'ما معنى الكوليسترول عندي'], ['read-summary', 'اقرأ لي الملخص'], ['navigate', 'اعرض ورقة الطبيب'], ['navigate', 'افتح الطباعة بخط كبير'], ['explain-question', 'اشرح السؤال الثاني'], ['navigate', 'غيّر اللغة إلى الإنجليزية'], ['navigate', 'حوّل إلى الهندية'], ['other', 'هل أتناول حبوب الحديد'], ['other', 'هل الهيموجلوبين عندي خطير'], ['other', 'هل عندي السكري'], ['other', 'كيف أرفع الهيموجلوبين']],
+  bn: [['explain-result', 'আমার হিমোগ্লোবিন মানে কি?:', 'heard'], ['navigate', 'ডাক্তার শিখ দেখানো।.', 'heard'], ['read-summary', 'সারাংশ বলুন।', 'heard'], ['explain-question', 'দ্বিতীয় প্রশ্নের মানে বলুন'], ['navigate', 'ইংরেজিতে বদলান'], ['other', 'আমি কি আয়রন ট্যাবলেট খাব'], ['other', 'আমার হিমোগ্লোবিন কি বিপজ্জনক'], ['other', 'আমার ডায়াবেটিস আছে কি']],
+  mr: [['explain-result', 'माझ्या हिमोग्लोबिनचा अर्थ काय?'], ['read-summary', 'सारांश सांगा'], ['navigate', 'डॉक्टर शीट दाखवा'], ['navigate', 'मोठ्या अक्षरांतील प्रिंट उघडा'], ['explain-question', 'दुसऱ्या प्रश्नाचा अर्थ समजावा'], ['navigate', 'मराठी मध्ये बदला'], ['other', 'मी लोहाची गोळी घ्यावी का'], ['other', 'माझे हिमोग्लोबिन धोकादायक आहे का'], ['other', 'मला मधुमेह आहे का']],
+  fr: [['explain-result', 'que signifie mon hémoglobine?', 'heard'], ['explain-result', 'Explique-moi mon cholestérol.', 'heard'], ['read-summary', 'Lis-moi le résumé.', 'heard'], ['navigate', 'montre l\'affiche pour le médecin.', 'heard'], ['navigate', 'Ouvre les grands caractères.R', 'heard'], ['explain-question', 'Explique la deuxième question.', 'heard'], ['navigate', 'asse en allemand.', 'heard'], ['other', 'Dois-je prendre des comprimés de fer?', 'heard'], ['other', 'mon hémoglobine est-elle dangereuse?', 'heard'], ['explain-result', 'Que signifie mon hémoglobine ?'], ['explain-result', 'Explique-moi mon cholestérol'], ['explain-result', 'Quel est mon taux de glycémie ?'], ['read-summary', 'Lis-moi le résumé'], ['navigate', 'Montre la fiche pour le médecin'], ['navigate', 'Ouvre les grands caractères'], ['explain-question', 'Explique la deuxième question'], ['navigate', 'Passe en allemand'], ['navigate', 'Retour aux résultats'], ['other', 'Dois-je prendre des comprimés de fer ?'], ['other', 'Mon hémoglobine est-elle dangereuse ?'], ['other', 'Est-ce que j’ai du diabète ?'], ['other', 'Comment augmenter mon hémoglobine ?'], ['other', 'Que faire avec un cholestérol élevé ?']],
+  de: [['explain-result', 'Was bedeutet mein Hämoglobin?!', 'heard'], ['explain-result', 'kläre mir mir mein Cholesterin!', 'heard'], ['read-summary', 'Lese mir die Zusammenfassung vor?', 'heard'], ['navigate', 'Zeig mir das Arztblatt!', 'heard'], ['navigate', 'Öffne den Großdruck.!', 'heard'], ['explain-question', 'kläre die zweite Frage.', 'heard'], ['navigate', 'Wechsle zu Französisch.', 'heard'], ['other', 'Soll ich Eisentabletten nehmen?', 'heard'], ['other', 'ist mein Hämoglobin gefährlich?', 'heard'], ['explain-result', 'Was bedeutet mein Hämoglobin?'], ['explain-result', 'Erkläre mir mein Cholesterin'], ['explain-result', 'Wie hoch ist mein Blutzucker?'], ['read-summary', 'Lies mir die Zusammenfassung vor'], ['navigate', 'Zeig mir das Arztblatt'], ['navigate', 'Öffne den Großdruck'], ['explain-question', 'Erkläre die zweite Frage'], ['navigate', 'Wechsle zu Französisch'], ['navigate', 'Zurück zu den Ergebnissen'], ['other', 'Soll ich Eisentabletten nehmen?'], ['other', 'Ist mein Hämoglobin gefährlich?'], ['other', 'Habe ich Diabetes?'], ['other', 'Wie kann ich mein Hämoglobin erhöhen?'], ['other', 'Was soll ich bei hohem Cholesterin tun?']],
+  pt: [['explain-result', 'O que significa a minha hemoglobina?', 'heard'], ['explain-result', 'Explique o o meu colesterol!', 'heard'], ['read-summary', 'Lei ao resumo para mim.!', 'heard'], ['navigate', 'Mostre a folha do médico..', 'heard'], ['navigate', 'Abra a letra grande.!', 'heard'], ['explain-question', 'Explique a a segunda pergunta..', 'heard'], ['navigate', 'Mude para o espanhol..', 'heard'], ['other', 'devo tomar comprimidos de ferro?', 'heard'], ['other', 'A minha hemoglobina é perigosa?', 'heard'], ['explain-result', 'O que significa a minha hemoglobina?'], ['explain-result', 'Explique o meu colesterol'], ['explain-result', 'Qual é a minha glicose?'], ['read-summary', 'Leia o resumo para mim'], ['navigate', 'Mostre a folha do médico'], ['navigate', 'Abra a letra grande'], ['explain-question', 'Explique a segunda pergunta'], ['navigate', 'Mude para o espanhol'], ['navigate', 'Voltar aos resultados'], ['other', 'Devo tomar comprimidos de ferro?'], ['other', 'A minha hemoglobina é perigosa?'], ['other', 'Eu tenho diabetes?'], ['other', 'Como posso aumentar a minha hemoglobina?'], ['other', 'O que fazer com o colesterol alto?']],
+  id: [['explain-result', 'Apa arti hemoglobin saya?', 'heard'], ['explain-result', 'jelaskan kolesterol saya.', 'heard'], ['read-summary', 'bacakan ringkasan saya.!', 'heard'], ['navigate', 'tampilkan lembar dokter..', 'heard'], ['navigate', 'buka cetakan huruf besar.', 'heard'], ['explain-question', 'Jelaskanaskan pertanyaan kedua.!', 'heard'], ['navigate', 'ganti ke bahasa Inggris.', 'heard'], ['other', 'Apakah saya harus minum tablet zat besi?.', 'heard'], ['other', 'Apakah hemoglobin saya berbahaya?', 'heard'], ['explain-result', 'Apa arti hemoglobin saya?'], ['explain-result', 'Jelaskan kolesterol saya'], ['explain-result', 'Berapa gula darah saya?'], ['read-summary', 'Bacakan ringkasan saya'], ['navigate', 'Tampilkan lembar dokter'], ['navigate', 'Buka cetakan huruf besar'], ['explain-question', 'Jelaskan pertanyaan kedua'], ['navigate', 'Ganti ke bahasa Inggris'], ['navigate', 'Kembali ke hasil'], ['other', 'Apakah saya harus minum tablet zat besi?'], ['other', 'Apakah hemoglobin saya berbahaya?'], ['other', 'Apakah saya menderita diabetes?'], ['other', 'Bagaimana cara menaikkan hemoglobin saya?'], ['other', 'Apa yang harus saya lakukan dengan kolesterol tinggi?']],
+  te: [['read-summary', 'Saramsam చెప్పు!.', 'heard'], ['navigate', 'ડాక్టర్', 'heard'], ['explain-result', 'నా హిమోగ్లోబిన్ ఎలా ఉంది?'], ['explain-result', 'నా హిమోగ్లోబిన్ తలితం అంటే ఏమిటి?', 'heard']],
+  hi: [['explain-result', 'मेरा हीमोग्लोबिन कितना है?'], ['explain-result', 'मेरे हीमोग्लोबिन के नतीजे का क्या मतलब है??', 'heard']],
+  es: [['navigate', 'Muéstrame la hoja para el médico.。', 'heard'], ['explain-result', '¿Qué significa mi mi hemoglobina?.', 'heard'], ['other', '¿debo ir al médico por mi hemoglobina?']],
+  en: [['navigate', 'Take me to the doctor she.', 'heard'], ['explain-result', 'how is my hemoglobin'], ['explain-result', 'my hemoglobin']],
+};
+for (const [lang, cases] of Object.entries(BY_LANG)) {
+  const wrong = cases.filter(([want, q]) => classify(q).intent !== want).map(([want, q]) => `${want}: ${q} => ${classify(q).intent}`);
+  check(`${lang}: ${cases.length} voice phrasings classify correctly (${cases.filter((c) => c[2] === 'heard').length} are real transcriber output)`, wrong.length === 0, wrong.join(' | '));
+}
+const sw = (q) => classify(q).action;
+check('switching language by voice works in each script', ['ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'].every((l) => BY_LANG[l].some(([w]) => w === 'navigate')) && sw('தெலுங்குக்கு மாற்று').language === 'te' && sw('ಹಿಂದಿಗೆ ಬದಲಿಸಿ').language === 'hi' && sw('ইংরেজিতে বদলান').language === 'en' && sw('मराठी मध्ये बदला').language === 'mr' && sw('Palitan sa Tagalog').language === 'tl' && sw('Tukar ke Bahasa Melayu').language === 'ms' && sw('حوّل إلى العربية').language === 'ar' && sw('Cambia a árabe').language === 'ar' && sw('Passe en allemand').language === 'de' && sw('Wechsle zu Französisch').language === 'fr' && sw('Mude para o português').language === 'pt' && sw('Ganti ke bahasa Indonesia').language === 'id' && sw('Cambia a portugués').language === 'pt');
+check('a short utterance that only names a page opens it, but switching language still needs a verb', classify('doctor sheet').action?.target === 'doctor-sheet' && classify('Telugu').intent === 'other');
+check('"médico" (doctor) is not mistaken for medicine, but medicine words still are', classify('muestrame la hoja para el medico').intent === 'navigate' && classify('que medicina tomo para la hemoglobina').intent === 'other');
+
+for (const l of ALL.filter((x) => x !== 'en')) {
+  const t = vt.VOICE_TEXT[l];
+  const parts = [t.redirect, t.whichTest, t.whichQuestion, t.openDoctorSheet, t.openHandout, t.backToResults, t.languageWord, ...t.ordinals];
+  check(`${l}: every fixed voice line exists, is in the language's own script, and is not the English text`, parts.every((x) => typeof x === 'string' && x.length > 1 && x !== REDIRECT) && (['es', 'tl', 'ms', 'fr', 'de', 'pt', 'id'].includes(l) || parts.every((x) => !/^[\x00-\x7f]+$/.test(x))), l);
+}
+const localCheck = [];
+for (const l of ALL.filter((x) => x !== 'en')) {
+  voiceMuse();
+  const adv = await voice.answerVoiceQuestion(vReq('should I take iron tablets', { lang: l }));
+  const which = await voice.answerVoiceQuestion(vReq('what does my cholesterol mean', { lang: l }));
+  const nav = await voice.answerVoiceQuestion(vReq('take me to the doctor sheet', { lang: l }));
+  const sw2 = await voice.answerVoiceQuestion(vReq('switch to Tamil', { lang: l }));
+  const q2 = await voice.answerVoiceQuestion(vReq('what does the doctor question mean', { lang: l }));
+  if (adv.answer !== REDIRECT || adv.answer_local !== vt.VOICE_TEXT[l].redirect) localCheck.push(`${l} redirect`);
+  if (!which.answer_local?.startsWith(vt.VOICE_TEXT[l].whichTest) || !which.answer_local.includes('Total Cholesterol')) localCheck.push(`${l} which test`);
+  if (nav.answer_local !== vt.VOICE_TEXT[l].openDoctorSheet) localCheck.push(`${l} nav`);
+  if (sw2.answer_local !== `${vt.VOICE_TEXT[l].languageWord}: தமிழ்`) localCheck.push(`${l} switch`);
+  if (!q2.answer_local?.startsWith(vt.VOICE_TEXT[l].whichQuestion)) localCheck.push(`${l} which question`);
+}
+check('in all 14 other languages the redirect, "which test?", "which question?" and page confirmations come back in the user\u2019s language, with the English text kept', localCheck.length === 0, localCheck.join(', '));
+voiceMuse();
+const enFixed = await voice.answerVoiceQuestion(vReq('should I take iron tablets'));
+check('English gets no translated copy of fixed lines', enFixed.answer === REDIRECT && !enFixed.answer_local);
+for (const l of ['ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id']) {
+  const names = { ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' };
+  const TX = 'Hemoglobin 11.2 g/dL, 12 to 15.5 g/dL';
+  const cc = voiceMuse(GOOD_HB, TX);
+  const rr = await voice.answerVoiceQuestion(vReq(BY_LANG[l].find(([w]) => w === 'explain-result')[1], { lang: l }));
+  check(`${l}: a Muse answer is requested in ${names[l]}, checked, and returned with its validated translation`, rr.intent === 'explain-result' && rr.answer === GOOD_HB && rr.answer_local === TX && cc.length === 1 && cc[0].body.messages[0].content.includes(`in ${names[l]}`), JSON.stringify(rr));
+}
+
 const sourceOf = (f) => readFileSync(f, 'utf8');
 const voiceSources = ['lib/voice.ts', 'lib/asr.ts', 'app/api/voice-ask/route.ts', 'app/api/transcribe/route.ts', 'app/page.tsx', 'app/VoiceAsk.tsx', 'app/recorder.ts', 'lib/muse.ts'].map(sourceOf).join('\n');
 check('no third-party speech or model service is referenced', !/elevenlabs|openai\.com|api\.anthropic|deepgram|whisper|azure|polly|google(apis|cloud)|texttospeech/i.test(voiceSources));
 check('hearing goes through /api/transcribe; the browser recognition is only the fallback; output reuses speakItems', /\/api\/transcribe/.test(sourceOf('app/VoiceAsk.tsx')) && /startRecording/.test(sourceOf('app/VoiceAsk.tsx')) && /webkitSpeechRecognition/.test(sourceOf('app/VoiceAsk.tsx')) && /museFailed/.test(sourceOf('app/VoiceAsk.tsx')) && /speakItems/.test(sourceOf('app/page.tsx')) && !/new SpeechSynthesisUtterance/.test(sourceOf('app/VoiceAsk.tsx')));
 check('the transcription route checks the WAV, limits the size and rate, and answers with text only', /checkWav/.test(sourceOf('app/api/transcribe/route.ts')) && /rateLimited/.test(sourceOf('app/api/transcribe/route.ts')) && /MAX_AUDIO_BYTES/.test(sourceOf('app/api/transcribe/route.ts')) && /NextResponse\.json\(\{ transcript/.test(sourceOf('app/api/transcribe/route.ts')));
 check('the recorder keeps audio in memory only: no storage, no upload except the one form post', !/localStorage|sessionStorage|indexedDB|fetch\(/.test(sourceOf('app/recorder.ts')) && !/writeFile|createWriteStream/.test(sourceOf('app/api/transcribe/route.ts')));
-check('the privacy panel tells the user their recording goes to Meta\u2019s transcriber', /Muse Voice Transcribe/.test(sourceOf('app/AiSees.tsx')));
+check('the privacy panel tells the user their recording goes to Meta\u2019s transcriber', /Muse Voice Transcribe/.test(sourceOf('lib/i18n-app.ts')) && /voicePrivacy/.test(sourceOf('app/AiSees.tsx')));
 globalThis.fetch = realFetch;
+
+// ------------------------------------------------------------------------------------------------
+group('Every message and dialog in all fifteen languages');
+{
+  const app = load('i18n-app');
+  const { LANGUAGES } = load('types');
+  const others = LANGUAGES.filter((l) => l !== 'en');
+  const names = (t) => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+  const EN = app.EN_APP;
+  const keys = Object.keys(EN);
+  check(`the English table has ${keys.length} sentences and the data has exactly the 14 other languages`, keys.length > 100 && Object.keys(load('i18n-app-data').APP_DATA).sort().join() === [...others].sort().join());
+  for (const lang of others) {
+    const pack = load('i18n-app-data').APP_DATA[lang] ?? {};
+    const missing = keys.filter((k) => typeof pack[k] !== 'string' || !pack[k].trim());
+    const extra = Object.keys(pack).filter((k) => !(k in EN));
+    const badVars = keys.filter((k) => typeof pack[k] === 'string' && names(pack[k]) !== names(EN[k]));
+    const same = keys.filter((k) => pack[k] === EN[k] && /[A-Za-z]{4,}/.test(EN[k]));
+    check(`${lang}: all ${keys.length} sentences present, none extra, every {placeholder} kept`, missing.length === 0 && extra.length === 0 && badVars.length === 0, `missing ${missing.slice(0, 4)} extra ${extra.slice(0, 4)} vars ${badVars.slice(0, 4)}`);
+    check(`${lang}: translated, not English left over`, same.length <= 3, same.join(','));
+    const t = app.appText(lang);
+    check(`${lang}: appText fills placeholders and leaves none behind`, !/\{\w+\}/.test(t('viewAria', { test: 'Hemoglobin', where: t('inPdf') })) && t('viewAria', { test: 'Hemoglobin', where: 'X' }).includes('Hemoglobin') && t('pageOf', { page: 2, total: 5 }).includes('5'));
+    check(`${lang}: the privacy panel still tells the user the recording goes to Muse Voice Transcribe`, /Muse Voice Transcribe/.test(pack.voicePrivacy));
+    check(`${lang}: no stray HTML in any sentence, and the "Needs review" label is worded the same wherever it appears`, keys.every((k) => !/[<>]/.test(pack[k])) && ['s_needsReview', 's_couldNotVerify', 'reviewBanner'].every((k) => pack[k].toLowerCase().includes(pack.needsReviewChip.toLowerCase())));
+  }
+  check('English falls back unchanged, and an unknown language never shows a placeholder', app.appText('en')('reviewTitle', { test: 'Iron' }) === 'Review Iron' && app.localizeServerText('Something we never wrote.', 'fr') === 'Something we never wrote.');
+
+  // The English templates must still be what the server actually says; if someone edits a server sentence this fails.
+  const sources = ['app/api/analyze/route.ts', 'app/api/transcribe/route.ts', 'app/api/voice-ask/route.ts', 'app/api/translate/route.ts', 'lib/verify.ts', 'lib/enhance.ts', 'lib/parse.ts', 'lib/photo.ts', 'lib/voice.ts', 'lib/asr.ts', 'lib/samples.ts', 'app/page.tsx']
+    .map((f) => readFileSync(f, 'utf8')).join('\n').replace(/\\'/g, "'");
+  const drift = keys.filter((k) => k.startsWith('s_')).filter((k) => EN[k].split(/\{\w+\}/).some((frag) => frag.trim() && !sources.includes(frag.trim())));
+  check('every server sentence in the table is still written exactly so in the server code', drift.length === 0, drift.join(','));
+
+  // Real server output, localized.
+  const failedRows = [{ test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Low', flag_source: 'range', plain_english: '', confidence: 'high', source_text: 'Hemoglobin 99 g/dL 12 - 15.5 g/dL' }];
+  const bad = verifyRows(failedRows, 'Hemoglobin 11.2 g/dL 12 - 15.5 g/dL');
+  const good = verifyRows([{ ...failedRows[0], source_text: 'Hemoglobin 11.2 g/dL 12 - 15.5 g/dL' }], 'Hemoglobin 11.2 g/dL 12 - 15.5 g/dL');
+  const withMuse = `${bad.note} Muse's second check also could not confirm: Hemoglobin, Ferritin.`;
+  const photoRefusals = Object.values(load('photo').PHOTO_REFUSAL_MESSAGES);
+  const verdictRow = verifyRows([{ ...failedRows[0], value: null, ref_low: null, ref_high: null, flag: 'High', flag_source: 'report_marker', source_text: 'Hemoglobin g/dL 12 - 15.5 g/dL' }], 'Hemoglobin g/dL 12 - 15.5 g/dL');
+  for (const lang of others) {
+    const L = (x) => app.localizeServerText(x, lang);
+    const t = app.appText(lang);
+    check(`${lang}: verification notes, row reasons and the Muse second-check line are all shown translated`, L(bad.note) === t('s_couldNotVerify', { list: 'Hemoglobin' }) && L(good.note) === t('s_verified') && L(bad.rows[0].review_reason) !== bad.rows[0].review_reason && L(bad.rows[0].review_reason).startsWith(t('s_needsReview', { problem: '' }).replace(/[.。।]$/, '')) && L(withMuse) === `${t('s_couldNotVerify', { list: 'Hemoglobin' })} ${t('s_museConfirm', { list: 'Hemoglobin, Ferritin' })}` && L(verdictRow.rows[0].review_reason).includes(i18n.flagLabel(lang, 'High')));
+    check(`${lang}: every photo refusal, rate-limit, upload and voice error is translated`, photoRefusals.every((m) => L(m) !== m) && ['Too many uploads from this connection. Please wait a few minutes and try again.', 'That file is over 10 MB. Please try a smaller file.', 'The recording was empty.', 'Translation failed.', 'The AI could not answer just now. Please try again in a moment.'].every((m) => L(m) !== m));
+    check(`${lang}: messages stored in English by the page (review result, no voice installed) are translated when shown`, L('All remaining results were reviewed against the original document.') === t('allReviewed') && L('Results still needing review against the original document: 2.') === t('stillNeedReview', { n: 2 }) && L('This device has no Telugu voice installed, so listening may be silent. Install one in your system speech settings, or use the large-print handout.').includes('Telugu') && L('This device has no Telugu voice installed, so listening may be silent. Install one in your system speech settings, or use the large-print handout.') !== 'This device has no Telugu voice installed, so listening may be silent. Install one in your system speech settings, or use the large-print handout.');
+  }
+  // No component keeps its own English: the files below may only show text through the language tables.
+  const hardcoded = ['app/AiSees.tsx', 'app/ReviewRowDialog.tsx', 'app/PdfCitationViewer.tsx', 'app/ImageCitationViewer.tsx', 'app/PhotoCropDialog.tsx']
+    .filter((f) => />\s*[A-Z][a-z]+[A-Za-z ,.'’]{3,}\s*<\//.test(readFileSync(f, 'utf8')) || /aria-label="[A-Za-z]/.test(readFileSync(f, 'utf8')) || /\balt="[A-Za-z]/.test(readFileSync(f, 'utf8')));
+  check('the dialogs, viewers and privacy panel contain no hard-coded English text or labels', hardcoded.length === 0, hardcoded.join(','));
+}
 
 // ------------------------------------------------------------------------------------------------
 const passed = groups.reduce((a, g) => a + g.passed, 0);

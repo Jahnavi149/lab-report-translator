@@ -1,7 +1,7 @@
 {
   "name": "lab-report-translator",
   "version": "0.3.0",
-  "description": "Turns a lab report (PDF or photo) into plain language in nine languages. AI explains, code decides.",
+  "description": "Turns a lab report (PDF or photo) into plain language in fifteen languages. AI explains, code decides.",
   "private": true,
   "license": "MIT",
   "engines": {

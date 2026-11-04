@@ -1,5 +1,6 @@
 'use client';
 import { flagLabel, uiFor } from '@/lib/i18n';
+import { appText } from '@/lib/i18n-app';
 import { formatRangeCompact, formatValue } from '@/lib/flags';
 import type { LabReport, LabRow, Language } from '@/lib/types';
 
@@ -23,8 +24,8 @@ export function FamilyHandout({ report, language, summary, questions, explain, o
         <button className="primary" onClick={() => window.print()}>🖨 {ui.printBtn}</button>
       </div>
       <h2>{ui.handoutTitle}</h2>
-      <p className="handout-sub">{report.title}{report.is_synthetic ? ' · SYNTHETIC' : ''}</p>
-      <ul className="handout-summary">{summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
+      <p className="handout-sub">{report.title}{report.is_synthetic ? ` · ${appText(language)('synthetic')}` : ''}</p>
+      <ul className="handout-summary">{summary.map((s, i) => <li key={i} dir="auto">{s}</li>)}</ul>
       <div className="handout-rows">
         {report.rows.map((r) => (
           <div key={r.test_name} className={`handout-row ${r.flag}`}>
@@ -32,12 +33,12 @@ export function FamilyHandout({ report, language, summary, questions, explain, o
             <div className="handout-value">{formatValue(r.value, r.unit)}</div>
             <div className="handout-range">{formatRangeCompact(r.ref_low, r.ref_high, r.unit, '—')}</div>
             <div><span className={`flag ${r.flag}`}>{flagLabel(language, r.flag)}</span></div>
-            <div className="handout-text">{explain(r)}</div>
+            <div className="handout-text" dir="auto">{explain(r)}</div>
           </div>
         ))}
       </div>
       <h3>{ui.questionsToAsk}</h3>
-      <ol className="handout-questions">{questions.map((q, i) => <li key={i}>{q}</li>)}</ol>
+      <ol className="handout-questions">{questions.map((q, i) => <li key={i} dir="auto">{q}</li>)}</ol>
       <p className="handout-foot"><strong>{ui.notMeanTitle}</strong> {ui.notMeanBody}</p>
     </section>
   );

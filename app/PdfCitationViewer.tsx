@@ -1,18 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { PdfSourceAnchor } from '@/lib/types';
+import { appText, type AppKey } from '@/lib/i18n-app';
+import type { Language, PdfSourceAnchor } from '@/lib/types';
 
 type PdfDocument = Awaited<ReturnType<typeof import('pdfjs-dist').getDocument>['promise']>;
 
-export function PdfCitationViewer({ file, anchor, onClose }: { file: File; anchor: PdfSourceAnchor; onClose: () => void }) {
+export function PdfCitationViewer({ file, anchor, language, onClose }: { file: File; anchor: PdfSourceAnchor; language: Language; onClose: () => void }) {
+  const t = appText(language);
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   const [pageNumber, setPageNumber] = useState(anchor.page);
   const [pageCount, setPageCount] = useState(0);
   const [width, setWidth] = useState(620);
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
   const [highlights, setHighlights] = useState<{ left: number; top: number; width: number; height: number }[]>([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<AppKey | ''>('');
   const frameRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,7 +52,7 @@ export function PdfCitationViewer({ file, anchor, onClose }: { file: File; ancho
         setPdf(loaded);
         setPageCount(loaded.numPages);
       } catch {
-        if (!cancelled) setError('This PDF could not be shown here. You can still use the extracted results.');
+        if (!cancelled) setError('pdfCannotShow');
       }
     })();
     return () => { cancelled = true; if (loadingTask) void loadingTask.destroy(); };
@@ -102,7 +104,7 @@ export function PdfCitationViewer({ file, anchor, onClose }: { file: File; ancho
         renderTask = page.render({ canvasContext: context, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] });
         await renderTask.promise;
       } catch (e) {
-        if (!cancelled && !(e instanceof Error && e.name === 'RenderingCancelledException')) setError('This PDF page could not be rendered.');
+        if (!cancelled && !(e instanceof Error && e.name === 'RenderingCancelledException')) setError('pdfCannotRender');
       }
     })();
     return () => { cancelled = true; renderTask?.cancel(); };
@@ -110,23 +112,23 @@ export function PdfCitationViewer({ file, anchor, onClose }: { file: File; ancho
 
   return (
     <div className="pdf-drawer-root">
-      <button className="pdf-drawer-backdrop" type="button" onClick={onClose} aria-label="Close PDF viewer" tabIndex={-1} />
-      <aside className="pdf-citation-panel" role="dialog" aria-modal="true" aria-label="Original PDF source">
+      <button className="pdf-drawer-backdrop" type="button" onClick={onClose} aria-label={t('closePdfViewer')} tabIndex={-1} />
+      <aside className="pdf-citation-panel" role="dialog" aria-modal="true" aria-label={t('pdfSourceAria')}>
         <div className="pdf-citation-head">
-          <div><strong>Original report</strong><div className="muted small">Source selected from page {anchor.page}</div></div>
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close PDF viewer">Close</button>
+          <div><strong>{t('originalReport')}</strong><div className="muted small">{t('sourceFromPage', { page: anchor.page })}</div></div>
+          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label={t('closePdfViewer')}>{t('close')}</button>
         </div>
         <div className="pdf-page-controls">
-          <button type="button" disabled={pageNumber <= 1} onClick={() => setPageNumber((n) => n - 1)}>Previous</button>
-          <span>Page {pageNumber}{pageCount ? ` of ${pageCount}` : ''}</span>
-          <button type="button" disabled={!pageCount || pageNumber >= pageCount} onClick={() => setPageNumber((n) => n + 1)}>Next</button>
+          <button type="button" disabled={pageNumber <= 1} onClick={() => setPageNumber((n) => n - 1)}>{t('previous')}</button>
+          <span>{pageCount ? t('pageOf', { page: pageNumber, total: pageCount }) : t('pageOnly', { page: pageNumber })}</span>
+          <button type="button" disabled={!pageCount || pageNumber >= pageCount} onClick={() => setPageNumber((n) => n + 1)}>{t('next')}</button>
         </div>
         <div className="pdf-view-scroll" ref={scrollRef}>
           <div className="pdf-page-frame" ref={frameRef}>
-            {!pdf && !error && <p className="muted">Opening PDF…</p>}
-            {error && <p className="error">{error}</p>}
+            {!pdf && !error && <p className="muted">{t('openingPdf')}</p>}
+            {error && <p className="error">{t(error)}</p>}
             <div className="pdf-page-canvas" style={{ width: pageSize.width, height: pageSize.height }}>
-              <canvas ref={canvasRef} aria-label={`PDF page ${pageNumber}`} />
+              <canvas ref={canvasRef} aria-label={t('pdfPageAria', { page: pageNumber })} />
               {highlights.map((rect, i) => <div key={i} className="pdf-highlight" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }} />)}
             </div>
           </div>

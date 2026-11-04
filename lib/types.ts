@@ -1,7 +1,7 @@
 export type Flag = 'Normal' | 'High' | 'Low' | 'Unknown';
 export type ReportedVerdict = Exclude<Flag, 'Unknown'>;
 export type Confidence = 'high' | 'low';
-export type Language = 'en' | 'te' | 'hi' | 'es' | 'ta' | 'kn' | 'ml' | 'bn' | 'mr';
+export type Language = 'en' | 'te' | 'hi' | 'es' | 'ta' | 'kn' | 'bn' | 'mr' | 'tl' | 'ms' | 'ar' | 'fr' | 'de' | 'pt' | 'id';
 export type FlagSource = 'range' | 'report_marker' | 'none';
 
 /** A location in the original PDF. Rectangles use PDF coordinates (origin at bottom-left). */
@@ -18,7 +18,9 @@ export interface ImageSourceBox {
   height: number;
 }
 
-export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'ml', 'bn', 'mr'];
+export const LANGUAGES: Language[] = ['en', 'te', 'hi', 'es', 'ta', 'kn', 'bn', 'mr', 'tl', 'ms', 'ar', 'fr', 'de', 'pt', 'id'];
+/** The one table of language names in English: used in model prompts and for matching a spoken language name. */
+export const LANGUAGE_NAME: Record<Language, string> = { en: 'English', te: 'Telugu', hi: 'Hindi', es: 'Spanish', ta: 'Tamil', kn: 'Kannada', bn: 'Bengali', mr: 'Marathi', tl: 'Tagalog', ms: 'Malay', ar: 'Arabic', fr: 'French', de: 'German', pt: 'Portuguese', id: 'Indonesian' };
 
 export interface LabRow {
   test_name: string;
