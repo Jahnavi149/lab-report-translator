@@ -7,7 +7,6 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; }
-body.large { font-size: 19px; }
 main { max-width: 1020px; margin: 0 auto; padding: 0 18px 72px; }
 a { color: var(--teal-dark); }
 .topbar { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
@@ -123,7 +122,7 @@ body.contrast .flag.High, body.contrast .flag.Low { text-decoration: underline; 
 body.contrast button, body.contrast select, body.contrast .linkbtn, body.contrast input { background: #fff; color: #000; border: 2px solid #000; }
 body.contrast button.primary { background: #000; color: #fff; box-shadow: none; }
 body.contrast code { background: #fff; border: 1px solid #000; }
-@media print { .sheet-col { border: 1px solid #000; } body.large { font-size: 14px; } }
+@media print { .sheet-col { border: 1px solid #000; } html.large { font-size: 100%; } }
 
 /* ---- Listen highlight, WhatsApp link, large-print family handout ---- */
 li.speaking { background: #fff3c4; outline: 3px solid #e0a800; border-radius: 8px; padding: 2px 8px; }
@@ -184,8 +183,9 @@ main, .topbar-inner { max-width: 1160px; }
 @media (min-width: 1100px) { .hero h1 { font-size: 3.6rem; max-width: 640px; } }
 
 /* ---- Clear and calm for older readers: bigger text, big tap targets, few choices on screen ---- */
-body { font-size: 18px; line-height: 1.6; }
-body.large { font-size: 23px; }
+/* Text sizes are in rem, so "Large text" scales the root: everything grows together, not just the body. */
+body { font-size: 1.125rem; line-height: 1.6; }
+html.large { font-size: 125%; }
 .topbar .row button, .topbar .row select { padding: 10px 14px; font-size: 1rem; }
 .topbar .row label { font-size: 1rem; }
 .logo small { display: none; }

@@ -49,7 +49,7 @@ export default function Home() {
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }, []);
 
   useEffect(() => {
-    document.body.classList.toggle('large', large);
+    document.documentElement.classList.toggle('large', large);
     document.body.classList.toggle('contrast', contrast);
   }, [large, contrast]);
   useEffect(() => { document.documentElement.lang = language; }, [language]);
@@ -246,7 +246,7 @@ export default function Home() {
               </div>
               {loading && <div role="status"><p>Reading your report. This can take up to a minute…</p><div className="progress"><i /></div></div>}
               {error && <div className="error" role="alert">{error}</div>}
-              <p className="muted small">Nothing is stored. The AI never receives your report text: only test names, values and ranges are sent to Meta&apos;s Muse AI, never your name, date of birth or ID. A photo is cleaned first: labelled identifiers are painted out of the picture on this server (trim the header for names with no label), and you can see exactly what was sent.</p>
+              <p className="muted small">{ui.privacyNote}</p>
             </section>
           </>
         )}
@@ -325,7 +325,7 @@ export default function Home() {
           <DoctorSheet report={report} language={language} summary={display.summary} questions={display.questions} flagged={flagged} onBack={() => setShowDoctor(false)} onClear={clearAll} />
         )}
 
-        <footer className="no-print"><p>This app explains a lab report. It does not diagnose, treat, or replace medical advice. Always ask your doctor about your results.</p></footer>
+        <footer className="no-print"><p>{ui.footerNote}</p></footer>
       </main>
     </>
   );
