@@ -8,7 +8,7 @@ My parents speak Telugu and couldn't make sense of their own lab reports, so I b
 
 **[Demo video](TODO)** · **[Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)**
 
-The video opens with a statement of what existed before the event and what was built during it (see [Build disclosure](#build-disclosure)).
+The video opens with a statement of what existed before the event and what was built during it (see [Build disclosure](#build-disclosure)). The live app has a Muse key configured, so everything works there with nothing to set up.
 
 ## What it does
 
@@ -67,14 +67,14 @@ The results page has a **What the AI sees** panel with the exact rows, lines and
 
 ## Run it
 
-Or skip setup and use the **[Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)**.
+The **[Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)** needs no setup. To run it locally, you add your own key.
 
 ```bash
 npm install
 cp .env.example .env.local
 ```
 
-Open `.env.local` and replace the placeholder with **your own Meta Model API key** (get one at dev.meta.ai):
+Open `.env.local` and replace the placeholder with **your own Meta Model API key** (get one at dev.meta.ai). Never commit it:
 
 ```
 META_MODEL_API_KEY=your-key-here
