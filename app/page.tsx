@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatRangeCompact } from '@/lib/flags';
+import { formatRangeCompact, questionsFor, summaryFor } from '@/lib/flags';
 import { flagLabel, uiFor } from '@/lib/i18n';
 import type { LabReport, LabRow, Language, TranslatedReport } from '@/lib/types';
 import { cropImage, isImageFile, normalizeImage, type CropEdges } from '@/lib/clientImage';
@@ -11,6 +11,7 @@ import { FamilyHandout } from './FamilyHandout';
 import { ImageCitationViewer } from './ImageCitationViewer';
 import { PdfCitationViewer } from './PdfCitationViewer';
 import { PhotoCropDialog } from './PhotoCropDialog';
+import { ReviewRowDialog } from './ReviewRowDialog';
 import { useVoiceAsk, VoiceButton, VoicePanel } from './VoiceAsk';
 import type { VoiceAction } from '@/lib/voice';
 
@@ -42,6 +43,7 @@ export default function Home() {
   const [sourceBox, setSourceBox] = useState<LabRow['source_box'] | null>(null);
   const [sourceQuote, setSourceQuote] = useState('');
   const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [reviewingTest, setReviewingTest] = useState<string | null>(null);
   const listenToken = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -192,7 +194,7 @@ export default function Home() {
   useEffect(() => { stopListen(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
 
-  function startNew() { setReport(null); setTestDate(''); setPdfFile(null); setSourceAnchor(null); setImageFile(null); setSourceBox(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
+  function startNew() { setReport(null); setTestDate(''); setPdfFile(null); setSourceAnchor(null); setImageFile(null); setSourceBox(null); setReviewingTest(null); setShowDoctor(false); setShowHandout(false); setExpanded(null); stopListen(); }
   function clearAll() { startNew(); setError(''); }
 
   const shareText = report ? buildShareText({ title: report.title, summary: display.summary, questions: display.questions, questionsHeading: ui.questionsToAsk, disclaimer: ui.infoOnly, synthetic: report.is_synthetic }) : '';
@@ -205,6 +207,7 @@ export default function Home() {
 
   const flagged = report?.rows.filter((r) => r.flag === 'High' || r.flag === 'Low' || r.flag === 'Unknown') ?? [];
   const reviewCount = report?.rows.filter((r) => r.confidence === 'low').length ?? 0;
+  const reviewingRow = report?.rows.find((r) => r.test_name === reviewingTest && r.confidence === 'low') ?? null;
   const fromPhoto = report?.muse_features?.includes('photo reading') ?? false;
   function citeRow(row: LabRow) {
     if (pdfFile && row.source_anchor) setSourceAnchor(row.source_anchor);
@@ -213,6 +216,26 @@ export default function Home() {
   // The Source column appears for a PDF, or for a photo once at least one line could be located in it.
   const showSource = Boolean(pdfFile) || Boolean(imageFile && report?.rows.some((r) => r.source_box));
   const sourceName = pdfFile ? 'PDF' : 'photo';
+
+  function finishRowReview(testName: string, decision: 'approve' | 'reject') {
+    setReport((current) => {
+      if (!current) return current;
+      const rows = decision === 'approve'
+        ? current.rows.map((row) => row.test_name === testName ? { ...row, confidence: 'high' as const, review_reason: undefined } : row)
+        : current.rows.filter((row) => row.test_name !== testName);
+      const remaining = rows.filter((row) => row.confidence === 'low').length;
+      return {
+        ...current,
+        rows,
+        ...(decision === 'reject' ? { summary: summaryFor(rows), questions: questionsFor(rows) } : {}),
+        verification_passed: remaining === 0,
+        verification_note: remaining === 0
+          ? 'All remaining results were reviewed against the original document.'
+          : `${remaining} result${remaining === 1 ? '' : 's'} still ${remaining === 1 ? 'needs' : 'need'} review against the original document.`,
+      };
+    });
+    setReviewingTest(null);
+  }
 
   return (
     <>
@@ -284,7 +307,7 @@ export default function Home() {
                   <tr key={r.test_name}>
                     <td data-label={ui.testCol}>
                       <button onClick={() => setExpanded(expanded === r.test_name ? null : r.test_name)} aria-expanded={expanded === r.test_name}>{r.test_name} ▾</button>
-                      {r.confidence === 'low' && <div><span className="pill review" title={r.review_reason}>Needs review</span></div>}
+                      {r.confidence === 'low' && <div><button type="button" className="pill review review-chip" title={r.review_reason} onClick={() => setReviewingTest(r.test_name)}>Needs review</button></div>}
                       {expanded === r.test_name && (
                         <div className="detail">
                           <strong>{fromPhoto ? 'Quoted from your photo:' : 'From your report:'}</strong>{' '}
@@ -315,6 +338,17 @@ export default function Home() {
           </section>
           {pdfFile && sourceAnchor && <PdfCitationViewer file={pdfFile} anchor={sourceAnchor} onClose={() => setSourceAnchor(null)} />}
           {imageFile && sourceBox && <ImageCitationViewer file={imageFile} box={sourceBox} quote={sourceQuote} onClose={() => setSourceBox(null)} />}
+          {reviewingRow && !sourceAnchor && !sourceBox && (
+            <ReviewRowDialog
+              row={reviewingRow}
+              citationSource={pdfFile ? 'PDF' : imageFile ? 'photo' : 'document'}
+              canViewCitation={Boolean((pdfFile && reviewingRow.source_anchor) || (imageFile && reviewingRow.source_box))}
+              onViewCitation={() => citeRow(reviewingRow)}
+              onApprove={() => finishRowReview(reviewingRow.test_name, 'approve')}
+              onReject={() => finishRowReview(reviewingRow.test_name, 'reject')}
+              onClose={() => setReviewingTest(null)}
+            />
+          )}
           </div>
         )}
 
