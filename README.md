@@ -8,7 +8,7 @@ My parents speak Telugu and couldn't make sense of their own lab reports, so I b
 
 **[Demo video](TODO)** · **[Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)**
 
-The video opens with a statement of what existed before the event and what was built during it (see [Build disclosure](#build-disclosure)). The live app has a Muse key configured, so photo reading, translation and voice work there.
+The video opens with a statement of what existed before the event and what was built during it (see [Build disclosure](#build-disclosure)).
 
 ## What it does
 
@@ -67,17 +67,29 @@ The results page has a **What the AI sees** panel with the exact rows, lines and
 
 ## Run it
 
+Or skip setup and use the **[Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)**.
+
 ```bash
 npm install
-cp .env.example .env.local     # then add your key
-npm run dev                    # http://localhost:3000
+cp .env.example .env.local
 ```
 
-Set `META_MODEL_API_KEY` in `.env.local`. Get a key at dev.meta.ai and use your own; never commit one. `.env.example` documents every variable. Node 18.17 or newer.
+Open `.env.local` and replace the placeholder with **your own Meta Model API key** (get one at dev.meta.ai):
 
-- **Without a key,** the PDF flow still runs on code-written sentences. Photo reading, translation and voice need a key.
-- **Slow host?** Raise `MUSE_TIMEOUT_MS` (default 45000 ms; vision calls 55000).
-- Click **Try an example report** to see everything on a synthetic sample.
+```
+META_MODEL_API_KEY=your-key-here
+```
+
+Then start the app:
+
+```bash
+npm run dev          # http://localhost:3000
+```
+
+Click **Try an example report** to see everything on a synthetic sample. Node 18.17 or newer. `.env.local` is git-ignored; `.env.example` documents every variable.
+
+- The PDF flow also runs without a key, on code-written sentences. Photo reading, translation and voice use your key.
+- Slow host? Raise `MUSE_TIMEOUT_MS` (default 45000 ms; vision calls 55000).
 
 ## Tests
 
