@@ -15,7 +15,7 @@ Every language is also on Muse Voice Transcribe's own language list, so each wor
 
 | Feature | Covered in every language |
 |---|---|
-| Interface | Full translated interface ([`lib/i18n.ts`](../lib/i18n.ts)) |
+| Interface | Full translated interface ([`lib/i18n.ts`](../lib/i18n.ts)), plus the review dialog, citation viewers, photo trim step, privacy panel, notes and error messages ([`lib/i18n-app.ts`](../lib/i18n-app.ts)) |
 | Report text | Summary, questions and explanations translated by Muse, checked item by item |
 | Voice | Hearing, understanding, spoken replies |
 | Doctor sheet | Your language beside the English values; large-print handout; WhatsApp text |

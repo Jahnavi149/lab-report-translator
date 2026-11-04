@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { cropIsValid, type CropEdges } from '@/lib/clientImage';
+import { appText, type AppKey } from '@/lib/i18n-app';
+import type { Language } from '@/lib/types';
 
 // Optional extra privacy step for photos. The server already paints identifiers out of the picture before it can be
 // sent anywhere (lib/photo.ts); trimming here is a second, independent layer: the part outside the crop is cut off in
@@ -9,14 +11,15 @@ import { cropIsValid, type CropEdges } from '@/lib/clientImage';
 const NONE: CropEdges = { top: 0, right: 0, bottom: 0, left: 0 };
 const MAX_TRIM = 0.8; // top + bottom (and left + right) may never leave less than 20% / 10% of the picture
 
-const EDGES: { key: keyof CropEdges; label: string; opposite: keyof CropEdges }[] = [
-  { key: 'top', label: 'Trim from the top', opposite: 'bottom' },
-  { key: 'bottom', label: 'Trim from the bottom', opposite: 'top' },
-  { key: 'left', label: 'Trim from the left', opposite: 'right' },
-  { key: 'right', label: 'Trim from the right', opposite: 'left' },
+const EDGES: { key: keyof CropEdges; label: AppKey; opposite: keyof CropEdges }[] = [
+  { key: 'top', label: 'trimTop', opposite: 'bottom' },
+  { key: 'bottom', label: 'trimBottom', opposite: 'top' },
+  { key: 'left', label: 'trimLeft', opposite: 'right' },
+  { key: 'right', label: 'trimRight', opposite: 'left' },
 ];
 
-export function PhotoCropDialog({ file, onConfirm, onCancel }: { file: File; onConfirm: (edges: CropEdges) => void; onCancel: () => void }) {
+export function PhotoCropDialog({ file, language, onConfirm, onCancel }: { file: File; language: Language; onConfirm: (edges: CropEdges) => void; onCancel: () => void }) {
+  const t = appText(language);
   const [url, setUrl] = useState('');
   const [edges, setEdges] = useState<CropEdges>(NONE);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -45,16 +48,16 @@ export function PhotoCropDialog({ file, onConfirm, onCancel }: { file: File; onC
 
   return (
     <div className="pdf-drawer-root">
-      <button className="pdf-drawer-backdrop" type="button" onClick={onCancel} aria-label="Cancel" tabIndex={-1} />
+      <button className="pdf-drawer-backdrop" type="button" onClick={onCancel} aria-label={t('cancel')} tabIndex={-1} />
       <div className="crop-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="crop-title">
-        <h2 id="crop-title">Trim your photo before reading (optional)</h2>
+        <h2 id="crop-title">{t('cropTitle')}</h2>
         <p className="warn" style={{ marginTop: 0 }}>
-          <strong>Before Meta&apos;s Muse AI sees this photo, labelled details (a name or ID next to &quot;Patient Name&quot;, &quot;MRN&quot;, a phone number, an email, a date of birth) are found on this server and painted out,</strong>{' '}
-          and the cleaned picture is read again to check. A name printed with no label cannot be found automatically, so please trim the header away here: the trimmed part never leaves this device. You will see exactly what was sent.
+          <strong>{t('cropWarnStrong')}</strong>{' '}
+          {t('cropWarnRest')}
         </p>
         <div className="crop-stage">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {url && <img src={url} alt="Your lab report photo. Use the sliders to trim it." />}
+          {url && <img src={url} alt={t('cropAlt')} />}
           <div className="crop-shade" style={{ left: 0, right: 0, top: 0, height: `${edges.top * 100}%` }} />
           <div className="crop-shade" style={{ left: 0, right: 0, bottom: 0, height: `${edges.bottom * 100}%` }} />
           <div className="crop-shade" style={{ left: 0, width: `${edges.left * 100}%`, top: `${edges.top * 100}%`, bottom: `${edges.bottom * 100}%` }} />
@@ -62,15 +65,15 @@ export function PhotoCropDialog({ file, onConfirm, onCancel }: { file: File; onC
         </div>
         <div className="crop-sliders">
           {EDGES.map(({ key, label, opposite }) => (
-            <label key={key}>{label}
+            <label key={key}>{t(label)}
               <input type="range" min={0} max={MAX_TRIM * 100} step={1} value={Math.round(edges[key] * 100)} onChange={(e) => set(key, opposite, Number(e.target.value) / 100)} />
             </label>
           ))}
         </div>
         <div className="row">
-          <button className="primary big" onClick={() => onConfirm(edges)}>{trimmed ? 'Read the cropped photo' : 'Read this photo as it is'}</button>
-          {trimmed && <button className="big" onClick={() => setEdges(NONE)}>Reset crop</button>}
-          <button className="big" onClick={onCancel}>Cancel</button>
+          <button className="primary big" onClick={() => onConfirm(edges)}>{trimmed ? t('readCropped') : t('readAsIs')}</button>
+          {trimmed && <button className="big" onClick={() => setEdges(NONE)}>{t('resetCrop')}</button>}
+          <button className="big" onClick={onCancel}>{t('cancel')}</button>
         </div>
       </div>
     </div>

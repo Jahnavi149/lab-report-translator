@@ -2,11 +2,15 @@
 
 import { useEffect, useRef } from 'react';
 import { formatRangeCompact, formatValue } from '@/lib/flags';
-import type { LabRow } from '@/lib/types';
+import { flagLabel } from '@/lib/i18n';
+import { appText, localizeServerText } from '@/lib/i18n-app';
+import type { LabRow, Language } from '@/lib/types';
 
 interface Props {
   row: LabRow;
-  citationSource: 'PDF' | 'photo' | 'document';
+  language: Language;
+  /** "in the PDF" / "in the photo" / "in the document", already in the user's language. */
+  where: string;
   canViewCitation: boolean;
   onViewCitation: () => void;
   onApprove: () => void;
@@ -14,7 +18,8 @@ interface Props {
   onClose: () => void;
 }
 
-export function ReviewRowDialog({ row, citationSource, canViewCitation, onViewCitation, onApprove, onReject, onClose }: Props) {
+export function ReviewRowDialog({ row, language, where, canViewCitation, onViewCitation, onApprove, onReject, onClose }: Props) {
+  const t = appText(language);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
@@ -47,33 +52,33 @@ export function ReviewRowDialog({ row, citationSource, canViewCitation, onViewCi
 
   return (
     <div className="review-dialog-root no-print">
-      <button className="review-dialog-backdrop" type="button" onClick={onClose} aria-label="Close result review" tabIndex={-1} />
+      <button className="review-dialog-backdrop" type="button" onClick={onClose} aria-label={t('closeReview')} tabIndex={-1} />
       <div className="review-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="review-dialog-title" aria-describedby="review-dialog-help">
         <div className="review-dialog-head">
-          <h2 id="review-dialog-title">Review {row.test_name}</h2>
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close result review">Close</button>
+          <h2 id="review-dialog-title">{t('reviewTitle', { test: row.test_name })}</h2>
+          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label={t('closeReview')}>{t('close')}</button>
         </div>
 
-        <p id="review-dialog-help">Review the values against the original document and its citation before approving or rejecting this result.</p>
-        {row.review_reason && <p className="warn review-reason"><strong>Why it needs review:</strong> {row.review_reason}</p>}
+        <p id="review-dialog-help">{t('reviewHelp')}</p>
+        {row.review_reason && <p className="warn review-reason"><strong>{t('whyReview')}</strong> {localizeServerText(row.review_reason, language)}</p>}
 
         <dl className="review-values">
-          <div><dt>Value</dt><dd>{formatValue(row.value, row.unit)}</dd></div>
-          <div><dt>Printed range</dt><dd>{formatRangeCompact(row.ref_low, row.ref_high, row.unit, 'Not on report')}</dd></div>
-          <div><dt>Flag</dt><dd><span className={`flag ${row.flag}`}>{row.flag}</span></dd></div>
+          <div><dt>{t('valueLabel')}</dt><dd>{formatValue(row.value, row.unit)}</dd></div>
+          <div><dt>{t('printedRange')}</dt><dd>{formatRangeCompact(row.ref_low, row.ref_high, row.unit, t('notOnReport'))}</dd></div>
+          <div><dt>{t('flagWord')}</dt><dd><span className={`flag ${row.flag}`}>{flagLabel(language, row.flag)}</span></dd></div>
         </dl>
 
         <div className="review-citation">
-          <h3>Document citation</h3>
-          <p className="small">Extracted from: <code>{row.source_text}</code></p>
+          <h3>{t('citationHeading')}</h3>
+          <p className="small">{t('extractedFrom')} <code>{row.source_text}</code></p>
           {canViewCitation
-            ? <button type="button" className="pdf-citation-button" onClick={onViewCitation}>🔎 View citation in {citationSource}</button>
-            : <p className="muted small">A clickable citation is not available for this result. Compare it directly with the original document.</p>}
+            ? <button type="button" className="pdf-citation-button" onClick={onViewCitation}>🔎 {t('viewCitationIn', { where })}</button>
+            : <p className="muted small">{t('noCitation')}</p>}
         </div>
 
         <div className="review-dialog-actions">
-          <button type="button" className="danger" onClick={onReject}>Reject result</button>
-          <button type="button" className="primary" onClick={onApprove}>Approve result</button>
+          <button type="button" className="danger" onClick={onReject}>{t('rejectResult')}</button>
+          <button type="button" className="primary" onClick={onApprove}>{t('approveResult')}</button>
         </div>
       </div>
     </div>

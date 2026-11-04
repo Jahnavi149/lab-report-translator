@@ -1,9 +1,10 @@
 'use client';
 
-import type { AiInputDisclosure, VoiceExchange } from '@/lib/types';
+import { appText, type AppKey } from '@/lib/i18n-app';
+import type { AiInputDisclosure, Language, VoiceExchange } from '@/lib/types';
 
 // The trust moment: shows the exact data the AI was given for this report.
-export function AiSees({ input, voice = [] }: { input: AiInputDisclosure; voice?: VoiceExchange[] }) {
+export function AiSees({ input, voice = [], language }: { input: AiInputDisclosure; voice?: VoiceExchange[]; language: Language }) {
   const n = input.identifiers_removed;
   const sent = voice.filter((v) => v.sent_to_ai);
   const redirected = voice.filter((v) => v.redirected).length;
@@ -14,27 +15,34 @@ export function AiSees({ input, voice = [] }: { input: AiInputDisclosure; voice?
     ...(input.source_lines.length > 0 ? { result_lines_for_second_check: input.source_lines } : {}),
     ...(voice.length > 0 ? { voice_questions: { asked: voice.length, sent_to_ai: sent.length, handed_back_to_doctor: redirected, sent: sent.map((v) => ({ question: v.question_sent, answer: v.redirected ? '(not used: answer failed the safety check)' : v.answer })) } } : {}),
   };
-  const kinds = input.removed_kinds.length > 0 ? ` (${input.removed_kinds.join(', ')})` : '';
+  const t = appText(language);
+  const KIND_KEYS: Record<string, AppKey> = { email: 'kindEmail', 'web address': 'kindWeb', 'IP address': 'kindIp', date: 'kindDate', 'phone or ID number': 'kindPhoneId', 'ID number': 'kindId', 'name or ID line': 'kindNameLine', 'age over 89': 'kindAge' };
+  const kinds = input.removed_kinds.length > 0 ? ` (${input.removed_kinds.map((k) => (KIND_KEYS[k] ? t(KIND_KEYS[k]) : k)).join(', ')})` : '';
+  const items = [
+    input.photo ? t('itemCleanedPhoto') : input.redacted_report_text ? t('itemRedactedPdf') : '',
+    t('itemRows'),
+    input.source_lines.length > 0 ? t('itemResultLines') : '',
+  ].filter(Boolean).join(', ');
   return (
-    <section className="privacy-badge no-print" aria-label="Privacy">
+    <section className="privacy-badge no-print" aria-label={t('privacyAria')}>
       <span aria-hidden="true">🔒</span>
       <div>
         <strong>
           {input.photo
-            ? n > 0 ? `Your photo was cleaned before it was sent: ${n} ${n === 1 ? 'area' : 'areas'} with labelled personal details ${n === 1 ? 'was' : 'were'} painted out${kinds}.` : 'Your photo was checked before it was sent: no labelled personal details were found on it.'
-            : n > 0 ? `${n} identifier${n === 1 ? '' : 's'} on your PDF ${n === 1 ? 'was' : 'were'} removed before its text was sent to the AI.` : 'The PDF text was checked for identifiers before it was sent to the AI.'}
+            ? n > 0 ? t('photoCleaned', { n, kinds }) : t('photoChecked')
+            : n > 0 ? t('pdfIdsRemoved', { n, kinds }) : t('pdfChecked')}
         </strong>{' '}
         <span className="muted small">
-          {input.photo ? 'The cleaned picture was read again to make sure nothing that was painted could still be made out. A name printed with no label cannot be found automatically, so trim it away before uploading.' : 'The AI receives the redacted selectable PDF text so it can identify the result rows. Pattern-based redaction can miss an unlabelled name.'}
+          {input.photo ? t('photoPanelNote') : t('pdfPanelNote')}
         </span>
-        {voice.length > 0 && <div className="muted small">Voice questions: {voice.length} asked, {sent.length} sent to the AI{redirected > 0 ? `, ${redirected} handed back to your doctor` : ''}. Only the question text goes, with identifiers removed, plus the test names, values and ranges above. This app never stores your voice. The recording goes to Meta\u2019s Muse Voice Transcribe only to be turned into text (for English questions, with the test names to help it spell them), and is then dropped. If that is unavailable, your browser\u2019s own speech recognition does this step instead; in some browsers, such as Chrome, the browser\u2019s maker handles it.</div>}
-        {input.lines_withheld > 0 && <div className="muted small">{input.lines_withheld} result line{input.lines_withheld === 1 ? ' was' : 's were'} kept out of the second check because {input.lines_withheld === 1 ? 'it has' : 'they have'} extra text.</div>}
+        {voice.length > 0 && <div className="muted small">{t('voiceSummary', { asked: voice.length, sent: sent.length })}{redirected > 0 ? ` ${t('voiceHanded', { n: redirected })}` : ''} {t('voicePrivacy')}</div>}
+        {input.lines_withheld > 0 && <div className="muted small">{t('linesWithheld', { n: input.lines_withheld })}</div>}
         <details className="ai-sees">
-          <summary>What the AI sees</summary>
-          <p className="muted small">This is everything the AI is given about this report: {input.photo ? 'the cleaned photo, ' : input.redacted_report_text ? 'the redacted selectable PDF text, ' : ''}test names, values, units and printed ranges{input.source_lines.length > 0 ? ', and each result\u2019s own line' : ''}. The sentences it writes are sent back to it only if you ask for a translation. A spoken question is sent only when you ask it to explain a result or a doctor question.</p>
+          <summary>{t('whatAiSees')}</summary>
+          <p className="muted small">{t('aiSeesIntro', { items })}</p>
           {input.photo_preview && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="ai-photo" src={input.photo_preview} alt="The cleaned photo that was sent to the AI. Black boxes cover personal details." />
+            <img className="ai-photo" src={input.photo_preview} alt={t('aiPhotoAlt')} />
           )}
           <pre>{JSON.stringify(payload, null, 2)}</pre>
         </details>

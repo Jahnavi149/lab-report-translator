@@ -3,12 +3,12 @@
 [← Back to README](../README.md)
 
 ```bash
-npm test      # 598 checks; also runs before every `npm run build`
+npm test      # 714 checks; also runs before every `npm run build`
 ```
 
 [`scripts/evaluate.mjs`](../scripts/evaluate.mjs) runs the real `lib/` modules, the real sample PDF, real OCR on fixture photos and a mocked Meta API. No key or network needed.
 
-## What the 583 checks cover
+## What the 714 checks cover
 
 | Area | Examples |
 |---|---|
@@ -18,7 +18,7 @@ npm test      # 598 checks; also runs before every `npm run build`
 | Muse pipeline | Mocked API with bad output injected: every failure falls back to code-written text |
 | Privacy | 30+ adversarial identifier lines; every request body inspected for leaks; four new languages' header lines removed |
 | Photo cleaning | Identifiers painted out and read again; refusal if still readable |
-| Languages | Every interface string in all 15 languages; share text adds no numbers |
+| Languages | Every interface string, dialog, note and server error in all 15 languages, with every placeholder kept; server messages still match the server code; share text adds no numbers |
 | Voice | Intents and the redirect line in all 15 languages, including phrases recorded from the real transcriber |
 
 ## Real-world checks run during the build

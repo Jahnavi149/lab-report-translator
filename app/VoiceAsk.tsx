@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Ui } from '@/lib/i18n';
+import { localizeServerText } from '@/lib/i18n-app';
 import type { LabReport, Language, VoiceExchange } from '@/lib/types';
 import type { VoiceAction, VoiceResult } from '@/lib/voice';
 import { canRecord, startRecording, type Recorder } from './recorder';
@@ -107,7 +108,7 @@ export function useVoiceAsk(o: VoiceAskOptions): VoiceAsk {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 503 || res.status === 501) setAvailable(false);
-        setMessage(typeof data?.error === 'string' ? data.error : ui.micError);
+        setMessage(typeof data?.error === 'string' ? localizeServerText(data.error, language) : ui.micError);
         setState('idle');
         return;
       }
@@ -156,7 +157,7 @@ export function useVoiceAsk(o: VoiceAskOptions): VoiceAsk {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 503 || res.status === 501) setAvailable(false); else museFailed.current = recognitionCtor() !== null;
-        setMessage(typeof data?.error === 'string' ? data.error : ui.micError);
+        setMessage(typeof data?.error === 'string' ? localizeServerText(data.error, language) : ui.micError);
         setState('idle');
         return;
       }

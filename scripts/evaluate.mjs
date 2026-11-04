@@ -1153,8 +1153,59 @@ check('no third-party speech or model service is referenced', !/elevenlabs|opena
 check('hearing goes through /api/transcribe; the browser recognition is only the fallback; output reuses speakItems', /\/api\/transcribe/.test(sourceOf('app/VoiceAsk.tsx')) && /startRecording/.test(sourceOf('app/VoiceAsk.tsx')) && /webkitSpeechRecognition/.test(sourceOf('app/VoiceAsk.tsx')) && /museFailed/.test(sourceOf('app/VoiceAsk.tsx')) && /speakItems/.test(sourceOf('app/page.tsx')) && !/new SpeechSynthesisUtterance/.test(sourceOf('app/VoiceAsk.tsx')));
 check('the transcription route checks the WAV, limits the size and rate, and answers with text only', /checkWav/.test(sourceOf('app/api/transcribe/route.ts')) && /rateLimited/.test(sourceOf('app/api/transcribe/route.ts')) && /MAX_AUDIO_BYTES/.test(sourceOf('app/api/transcribe/route.ts')) && /NextResponse\.json\(\{ transcript/.test(sourceOf('app/api/transcribe/route.ts')));
 check('the recorder keeps audio in memory only: no storage, no upload except the one form post', !/localStorage|sessionStorage|indexedDB|fetch\(/.test(sourceOf('app/recorder.ts')) && !/writeFile|createWriteStream/.test(sourceOf('app/api/transcribe/route.ts')));
-check('the privacy panel tells the user their recording goes to Meta\u2019s transcriber', /Muse Voice Transcribe/.test(sourceOf('app/AiSees.tsx')));
+check('the privacy panel tells the user their recording goes to Meta\u2019s transcriber', /Muse Voice Transcribe/.test(sourceOf('lib/i18n-app.ts')) && /voicePrivacy/.test(sourceOf('app/AiSees.tsx')));
 globalThis.fetch = realFetch;
+
+// ------------------------------------------------------------------------------------------------
+group('Every message and dialog in all fifteen languages');
+{
+  const app = load('i18n-app');
+  const { LANGUAGES } = load('types');
+  const others = LANGUAGES.filter((l) => l !== 'en');
+  const names = (t) => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+  const EN = app.EN_APP;
+  const keys = Object.keys(EN);
+  check(`the English table has ${keys.length} sentences and the data has exactly the 14 other languages`, keys.length > 100 && Object.keys(load('i18n-app-data').APP_DATA).sort().join() === [...others].sort().join());
+  for (const lang of others) {
+    const pack = load('i18n-app-data').APP_DATA[lang] ?? {};
+    const missing = keys.filter((k) => typeof pack[k] !== 'string' || !pack[k].trim());
+    const extra = Object.keys(pack).filter((k) => !(k in EN));
+    const badVars = keys.filter((k) => typeof pack[k] === 'string' && names(pack[k]) !== names(EN[k]));
+    const same = keys.filter((k) => pack[k] === EN[k] && /[A-Za-z]{4,}/.test(EN[k]));
+    check(`${lang}: all ${keys.length} sentences present, none extra, every {placeholder} kept`, missing.length === 0 && extra.length === 0 && badVars.length === 0, `missing ${missing.slice(0, 4)} extra ${extra.slice(0, 4)} vars ${badVars.slice(0, 4)}`);
+    check(`${lang}: translated, not English left over`, same.length <= 3, same.join(','));
+    const t = app.appText(lang);
+    check(`${lang}: appText fills placeholders and leaves none behind`, !/\{\w+\}/.test(t('viewAria', { test: 'Hemoglobin', where: t('inPdf') })) && t('viewAria', { test: 'Hemoglobin', where: 'X' }).includes('Hemoglobin') && t('pageOf', { page: 2, total: 5 }).includes('5'));
+    check(`${lang}: the privacy panel still tells the user the recording goes to Muse Voice Transcribe`, /Muse Voice Transcribe/.test(pack.voicePrivacy));
+    check(`${lang}: no stray HTML in any sentence, and the "Needs review" label is worded the same wherever it appears`, keys.every((k) => !/[<>]/.test(pack[k])) && ['s_needsReview', 's_couldNotVerify', 'reviewBanner'].every((k) => pack[k].toLowerCase().includes(pack.needsReviewChip.toLowerCase())));
+  }
+  check('English falls back unchanged, and an unknown language never shows a placeholder', app.appText('en')('reviewTitle', { test: 'Iron' }) === 'Review Iron' && app.localizeServerText('Something we never wrote.', 'fr') === 'Something we never wrote.');
+
+  // The English templates must still be what the server actually says; if someone edits a server sentence this fails.
+  const sources = ['app/api/analyze/route.ts', 'app/api/transcribe/route.ts', 'app/api/voice-ask/route.ts', 'app/api/translate/route.ts', 'lib/verify.ts', 'lib/enhance.ts', 'lib/parse.ts', 'lib/photo.ts', 'lib/voice.ts', 'lib/asr.ts', 'lib/samples.ts', 'app/page.tsx']
+    .map((f) => readFileSync(f, 'utf8')).join('\n').replace(/\\'/g, "'");
+  const drift = keys.filter((k) => k.startsWith('s_')).filter((k) => EN[k].split(/\{\w+\}/).some((frag) => frag.trim() && !sources.includes(frag.trim())));
+  check('every server sentence in the table is still written exactly so in the server code', drift.length === 0, drift.join(','));
+
+  // Real server output, localized.
+  const failedRows = [{ test_name: 'Hemoglobin', value: 11.2, unit: 'g/dL', ref_low: 12, ref_high: 15.5, flag: 'Low', flag_source: 'range', plain_english: '', confidence: 'high', source_text: 'Hemoglobin 99 g/dL 12 - 15.5 g/dL' }];
+  const bad = verifyRows(failedRows, 'Hemoglobin 11.2 g/dL 12 - 15.5 g/dL');
+  const good = verifyRows([{ ...failedRows[0], source_text: 'Hemoglobin 11.2 g/dL 12 - 15.5 g/dL' }], 'Hemoglobin 11.2 g/dL 12 - 15.5 g/dL');
+  const withMuse = `${bad.note} Muse's second check also could not confirm: Hemoglobin, Ferritin.`;
+  const photoRefusals = Object.values(load('photo').PHOTO_REFUSAL_MESSAGES);
+  const verdictRow = verifyRows([{ ...failedRows[0], value: null, ref_low: null, ref_high: null, flag: 'High', flag_source: 'report_marker', source_text: 'Hemoglobin g/dL 12 - 15.5 g/dL' }], 'Hemoglobin g/dL 12 - 15.5 g/dL');
+  for (const lang of others) {
+    const L = (x) => app.localizeServerText(x, lang);
+    const t = app.appText(lang);
+    check(`${lang}: verification notes, row reasons and the Muse second-check line are all shown translated`, L(bad.note) === t('s_couldNotVerify', { list: 'Hemoglobin' }) && L(good.note) === t('s_verified') && L(bad.rows[0].review_reason) !== bad.rows[0].review_reason && L(bad.rows[0].review_reason).startsWith(t('s_needsReview', { problem: '' }).replace(/[.。।]$/, '')) && L(withMuse) === `${t('s_couldNotVerify', { list: 'Hemoglobin' })} ${t('s_museConfirm', { list: 'Hemoglobin, Ferritin' })}` && L(verdictRow.rows[0].review_reason).includes(i18n.flagLabel(lang, 'High')));
+    check(`${lang}: every photo refusal, rate-limit, upload and voice error is translated`, photoRefusals.every((m) => L(m) !== m) && ['Too many uploads from this connection. Please wait a few minutes and try again.', 'That file is over 10 MB. Please try a smaller file.', 'The recording was empty.', 'Translation failed.', 'The AI could not answer just now. Please try again in a moment.'].every((m) => L(m) !== m));
+    check(`${lang}: messages stored in English by the page (review result, no voice installed) are translated when shown`, L('All remaining results were reviewed against the original document.') === t('allReviewed') && L('Results still needing review against the original document: 2.') === t('stillNeedReview', { n: 2 }) && L('This device has no Telugu voice installed, so listening may be silent. Install one in your system speech settings, or use the large-print handout.').includes('Telugu') && L('This device has no Telugu voice installed, so listening may be silent. Install one in your system speech settings, or use the large-print handout.') !== 'This device has no Telugu voice installed, so listening may be silent. Install one in your system speech settings, or use the large-print handout.');
+  }
+  // No component keeps its own English: the files below may only show text through the language tables.
+  const hardcoded = ['app/AiSees.tsx', 'app/ReviewRowDialog.tsx', 'app/PdfCitationViewer.tsx', 'app/ImageCitationViewer.tsx', 'app/PhotoCropDialog.tsx']
+    .filter((f) => />\s*[A-Z][a-z]+[A-Za-z ,.'’]{3,}\s*<\//.test(readFileSync(f, 'utf8')) || /aria-label="[A-Za-z]/.test(readFileSync(f, 'utf8')) || /\balt="[A-Za-z]/.test(readFileSync(f, 'utf8')));
+  check('the dialogs, viewers and privacy panel contain no hard-coded English text or labels', hardcoded.length === 0, hardcoded.join(','));
+}
 
 // ------------------------------------------------------------------------------------------------
 const passed = groups.reduce((a, g) => a + g.passed, 0);

@@ -1,5 +1,6 @@
 'use client';
 import { flagLabel, uiFor } from '@/lib/i18n';
+import { appText } from '@/lib/i18n-app';
 import { formatRangeCompact, formatValue } from '@/lib/flags';
 import type { LabReport, LabRow, Language } from '@/lib/types';
 
@@ -23,7 +24,7 @@ export function FamilyHandout({ report, language, summary, questions, explain, o
         <button className="primary" onClick={() => window.print()}>🖨 {ui.printBtn}</button>
       </div>
       <h2>{ui.handoutTitle}</h2>
-      <p className="handout-sub">{report.title}{report.is_synthetic ? ' · SYNTHETIC' : ''}</p>
+      <p className="handout-sub">{report.title}{report.is_synthetic ? ` · ${appText(language)('synthetic')}` : ''}</p>
       <ul className="handout-summary">{summary.map((s, i) => <li key={i} dir="auto">{s}</li>)}</ul>
       <div className="handout-rows">
         {report.rows.map((r) => (

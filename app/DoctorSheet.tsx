@@ -52,7 +52,7 @@ export function DoctorSheet({ report, language, summary, questions, flagged, tes
         <button className="primary" onClick={() => printDoctorSheet(testDate)}>🖨 {ui.printBtn}</button>
         <button onClick={onClear}>{ui.clearBtn}</button>
       </div>
-      <div className="sheet-banner no-print" style={{ marginTop:'20px' }}><strong>Doctor sheet</strong><br />{ui.sheetBanner}</div>
+      <div className="sheet-banner no-print" style={{ marginTop:'20px' }}><strong>{ui.doctorSheetBtn}</strong><br />{ui.sheetBanner}</div>
       <h2 style={{ marginTop: 18 }}>{report.title}</h2>
       <p className="lines fill">
         <label htmlFor="test-date">{ui.testDate}</label>{' '}
