@@ -28,6 +28,8 @@ export function DoctorSheet({ report, language, summary, questions, flagged, onB
       </div>
       <div className="sheet-banner"><strong>Doctor sheet</strong><br />{ui.sheetBanner}</div>
       <h2 style={{ marginTop: 18 }}>{report.title}</h2>
+      <p className="lines fill">{ui.testDate} ____________________</p>
+      <p className="lines fill">{ui.mainConcern} ________________________________________</p>
       <div className="sheet-grid">
         <div className="sheet-col">
           <h3>{ui.forFamily(LANG_NAME[language])}</h3>
@@ -37,6 +39,11 @@ export function DoctorSheet({ report, language, summary, questions, flagged, onB
         </div>
         <div className="sheet-col">
           <h3>For the doctor (English)</h3>
+          <p className="muted small trust-note">
+            {report.source_kind === 'photo'
+              ? 'Read from a photo by AI, so every value is marked for checking. Compare with the original report.'
+              : 'Values below were read from the report by code, not AI. Flags compare each value with the range printed on the report.'}
+          </p>
           <ul>
             {flagged.map((r) => (
               <li key={r.test_name}>

@@ -142,7 +142,7 @@ export async function summarizeWithMuse(rows: MuseSafeRow[]): Promise<string[]> 
 export async function questionsWithMuse(rows: MuseSafeRow[]): Promise<string[]> {
   const priority = priorityRows(rows);
   if (priority.length === 0) return [];
-  const system = `${INJECTION_GUARD}You write questions a patient can ask their doctor. Write exactly one question per test, in the same order, in plain English. Each question must name its test and its exact value, and end with a question mark. Ask only; never state a diagnosis, treatment, diet, or medication, and never say what the result means. Use only the numbers given. Return ONLY JSON: {"questions": [...]}.`;
+  const system = `${INJECTION_GUARD}You write questions a patient can ask their doctor. Write exactly one question per test, in the same order, in plain English. Each question must name its test and its exact value, and end with a question mark. Ask only; never state a diagnosis, treatment, diet, or medication, and never say what the result means, and never ask what caused it. Use only the numbers given. Return ONLY JSON: {"questions": [...]}.`;
   const parsed = extractJson(await callMuse([{ role: 'system', content: system }, { role: 'user', content: wrap(rowsPayload(priority)) }])) as { questions?: unknown };
   const asked = parsed.questions;
   if (!Array.isArray(asked) || asked.length !== priority.length) throw new Error('Muse questions length mismatch');

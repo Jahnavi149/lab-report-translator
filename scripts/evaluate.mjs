@@ -167,7 +167,9 @@ check('rejects summary that omits a flagged test from line 1', !safety.summaryIs
 check('rejects 2-line summary', !safety.summaryIsSafe(goodSummary.slice(0, 2), rows3));
 check('rejects summary with a diagnosis', !safety.summaryIsSafe(['Ask about first: Total Cholesterol (230 mg/dL, High) and HDL Cholesterol (38 mg/dL, Low). This may mean heart disease.', goodSummary[1], goodSummary[2]], rows3));
 check('rejects summary with an invented number', !safety.summaryIsSafe(['Ask about first: Total Cholesterol (230 mg/dL, High) and HDL Cholesterol (38 mg/dL, Low). Target 150.', goodSummary[1], goodSummary[2]], rows3));
-check('accepts a faithful question', safety.questionIsSafe('My Total Cholesterol was 230 mg/dL, above the printed range of 200. What could cause this, and should we recheck it?', chol));
+check('accepts a faithful question', safety.questionIsSafe('My Total Cholesterol was 230 mg/dL, above the printed range of 200. Should we recheck this, and is there anything I should track or bring to my next appointment?', chol));
+check('rejects a question that asks the doctor to speculate on a cause', !safety.questionIsSafe('My Total Cholesterol was 230 mg/dL. What could be causing this?', chol) && !safety.questionIsSafe('My Total Cholesterol was 230 mg/dL. What caused this?', chol));
+check('no deterministic question template asks about a cause', questionsFor(rows3).every((q) => !/caus/i.test(q)));
 check('accepts the deterministic question templates', questionsFor(rows3).slice(0, 2).every((q, i) => safety.questionIsSafe(q, rows3[i])));
 for (const [q, why] of [
   ['Should I start taking iron supplements for my Hemoglobin of 11.2?', 'treatment'],

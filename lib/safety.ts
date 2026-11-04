@@ -105,7 +105,7 @@ export function questionIsSafe(question: unknown, row: RowFields): question is s
   const body = stripNames(q, [row]);
   const nums = numbersIn(body);
   if (!nums.includes(String(row.value)) || !nums.every((n) => allowedNumbers(row).has(n))) return false;
-  return !containsDiagnosisOrTreatment(body) && !/\brisk|symptom|danger|serious|urgent|emergency|you (have|are|may|might)/i.test(body);
+  return !containsDiagnosisOrTreatment(body) && !/\brisk|symptom|danger|serious|urgent|emergency|\bcaus(e|es|ed|ing)\b|you (have|are|may|might)/i.test(body);
 }
 
 /**

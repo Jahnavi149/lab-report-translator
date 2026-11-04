@@ -60,7 +60,7 @@ function questionFor(r: LabRow): string {
   if (!range) {
     return `My ${r.test_name} was ${val(r)} and the report marks it ${r.flag}, but it prints no range. What range should I compare it to, and should we recheck it?`;
   }
-  return `My ${r.test_name} was ${val(r)}, while the range on this report is ${range}. What could cause this, and should we recheck it?`;
+  return `My ${r.test_name} was ${val(r)}, while the range on this report is ${range}. Should we recheck this, and is there anything I should track or bring to my next appointment?`;
 }
 
 const FILLER_QUESTION = 'Is there anything from this report I should track, bring, or ask about at my next visit?';

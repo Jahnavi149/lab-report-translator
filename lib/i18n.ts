@@ -13,6 +13,7 @@ export interface Ui {
   testCol: string; valueCol: string; rangeCol: string; flagCol: string; meaningCol: string;
   summaryHeading: string; resultsHeading: string;
   sheetBanner: string; forFamily: (lang: string) => string; questionsToAsk: string;
+  mainConcern: string; testDate: string;
   checklist: string; bringSheet: string; bringMeds: string; bringPrevious: string; doctorAnswers: string;
   notMeanTitle: string; notMeanBody: string; infoOnly: string;
   // Short notes on the landing page: how data is handled, and the footer disclaimer
@@ -37,6 +38,7 @@ const TE: Pack = {
     summaryHeading: 'సారాంశం — ముఖ్యమైనవి', resultsHeading: 'మీ ఫలితాలు, సులభ భాషలో',
     sheetBanner: 'డాక్టర్ షీట్ — ప్రింట్ చేయడానికి సిద్ధం. సమాచారం కోసం మాత్రమే, రోగ నిర్ధారణ కాదు. విలువలు, పరిధులు డాక్టర్ కోసం ఇంగ్లీష్‌లో ఉన్నాయి.',
     forFamily: (l) => `కుటుంబం కోసం (${l})`, questionsToAsk: 'అడగాల్సిన ప్రశ్నలు',
+    mainConcern: 'ఈరోజు నా ముఖ్య ఆందోళన:', testDate: 'పరీక్ష తేదీ:',
     checklist: 'చెక్‌లిస్ట్', bringSheet: 'ఈ షీట్ తీసుకురండి', bringMeds: 'మీ మందుల జాబితా తీసుకురండి', bringPrevious: 'మునుపటి రిపోర్టులు తీసుకురండి', doctorAnswers: 'డాక్టర్ సమాధానాలు',
     notMeanTitle: 'దీని అర్థం కాదు:', notMeanBody: 'ఒక్క ఎక్కువ లేదా తక్కువ విలువ రోగ నిర్ధారణ కాదు. దానిని మీ డాక్టర్ మాత్రమే సరైన సందర్భంలో అర్థం చేసుకోగలరు. మీకు అనారోగ్యంగా అనిపిస్తే వెంటనే వైద్య సహాయం తీసుకోండి. ఈ సాధనం అత్యవసర పరిస్థితిని అంచనా వేయలేదు.',
     infoOnly: 'సమాచారం కోసం మాత్రమే, రోగ నిర్ధారణ కాదు',
@@ -75,6 +77,7 @@ const HI: Pack = {
     summaryHeading: 'सारांश — सबसे ज़रूरी बातें', resultsHeading: 'आपके परिणाम, आसान भाषा में',
     sheetBanner: 'डॉक्टर शीट — प्रिंट के लिए तैयार। केवल जानकारी के लिए, निदान नहीं। सटीक मान और सीमाएँ डॉक्टर के लिए अंग्रेज़ी में हैं।',
     forFamily: (l) => `परिवार के लिए (${l})`, questionsToAsk: 'पूछने के लिए प्रश्न',
+    mainConcern: 'आज मेरी मुख्य चिंता:', testDate: 'जाँच की तारीख:',
     checklist: 'चेकलिस्ट', bringSheet: 'यह शीट साथ लाएँ', bringMeds: 'अपनी दवाइयों की सूची साथ लाएँ', bringPrevious: 'पिछली रिपोर्टें साथ लाएँ', doctorAnswers: 'डॉक्टर के उत्तर',
     notMeanTitle: 'इसका मतलब यह नहीं है:', notMeanBody: 'केवल एक अधिक या कम मान अपने आप में निदान नहीं है। उसे केवल आपका डॉक्टर पूरे संदर्भ में समझ सकता है। यदि आप अस्वस्थ महसूस करें तो तुरंत चिकित्सा सहायता लें। यह टूल आपातकाल का अनुमान नहीं लगा सकता।',
     infoOnly: 'केवल जानकारी के लिए, निदान नहीं',
@@ -113,6 +116,7 @@ const ES: Pack = {
     summaryHeading: 'Resumen: lo más importante', resultsHeading: 'Sus resultados, en lenguaje sencillo',
     sheetBanner: 'Hoja para el médico, lista para imprimir. Solo información, nunca un diagnóstico. Los valores y rangos exactos están en inglés para el médico.',
     forFamily: (l) => `Para la familia (${l})`, questionsToAsk: 'Preguntas para hacer',
+    mainConcern: 'Mi principal preocupación hoy:', testDate: 'Fecha de la prueba:',
     checklist: 'Lista de verificación', bringSheet: 'Traiga esta hoja', bringMeds: 'Traiga su lista de medicamentos', bringPrevious: 'Traiga informes anteriores', doctorAnswers: 'Respuestas del médico',
     notMeanTitle: 'Lo que esto NO significa:', notMeanBody: 'Un valor alto o bajo por sí solo no es un diagnóstico. Solo su médico puede interpretarlo en contexto. Si se siente mal, busque atención médica de inmediato. Esta herramienta no puede evaluar la urgencia.',
     infoOnly: 'Solo información, nunca un diagnóstico',
@@ -157,6 +161,7 @@ const TA: Pack = {
     sheetBanner: 'மருத்துவர் தாள் — அச்சிட தயார். தகவலுக்காக மட்டுமே, நோய் கண்டறிதல் அல்ல. சரியான மதிப்புகளும் வரம்புகளும் மருத்துவருக்காக ஆங்கிலத்தில் உள்ளன.',
     forFamily: (l) => `குடும்பத்திற்காக (${l})`,
     questionsToAsk: 'கேட்க வேண்டிய கேள்விகள்',
+    mainConcern: 'இன்று என் முக்கிய கவலை:', testDate: 'பரிசோதனை தேதி:',
     checklist: 'சரிபார்ப்புப் பட்டியல்',
     bringSheet: 'இந்தத் தாளைக் கொண்டு வாருங்கள்',
     bringMeds: 'உங்கள் மருந்துகளின் பட்டியலைக் கொண்டு வாருங்கள்',
@@ -221,6 +226,7 @@ const KN: Pack = {
     sheetBanner: 'ವೈದ್ಯರ ಹಾಳೆ — ಮುದ್ರಿಸಲು ಸಿದ್ಧ. ಮಾಹಿತಿಗಾಗಿ ಮಾತ್ರ, ರೋಗನಿರ್ಣಯವಲ್ಲ. ನಿಖರ ಮೌಲ್ಯಗಳು ಮತ್ತು ಮಿತಿಗಳು ವೈದ್ಯರಿಗಾಗಿ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿವೆ.',
     forFamily: (l) => `ಕುಟುಂಬಕ್ಕಾಗಿ (${l})`,
     questionsToAsk: 'ಕೇಳಬೇಕಾದ ಪ್ರಶ್ನೆಗಳು',
+    mainConcern: 'ಇಂದು ನನ್ನ ಮುಖ್ಯ ಕಾಳಜಿ:', testDate: 'ಪರೀಕ್ಷೆಯ ದಿನಾಂಕ:',
     checklist: 'ಪರಿಶೀಲನಾ ಪಟ್ಟಿ',
     bringSheet: 'ಈ ಹಾಳೆಯನ್ನು ತನ್ನಿ',
     bringMeds: 'ನಿಮ್ಮ ಔಷಧಿಗಳ ಪಟ್ಟಿಯನ್ನು ತನ್ನಿ',
@@ -285,6 +291,7 @@ const ML: Pack = {
     sheetBanner: 'ഡോക്ടർ ഷീറ്റ് — പ്രിന്റ് ചെയ്യാൻ തയ്യാർ. വിവരത്തിനു മാത്രം, രോഗനിർണയമല്ല. കൃത്യമായ മൂല്യങ്ങളും പരിധികളും ഡോക്ടർക്കായി ഇംഗ്ലീഷിലാണ്.',
     forFamily: (l) => `കുടുംബത്തിനായി (${l})`,
     questionsToAsk: 'ചോദിക്കേണ്ട ചോദ്യങ്ങൾ',
+    mainConcern: 'ഇന്ന് എന്റെ പ്രധാന ആശങ്ക:', testDate: 'പരിശോധന തീയതി:',
     checklist: 'ചെക്ക്‌ലിസ്റ്റ്',
     bringSheet: 'ഈ ഷീറ്റ് കൊണ്ടുവരിക',
     bringMeds: 'നിങ്ങളുടെ മരുന്നുകളുടെ പട്ടിക കൊണ്ടുവരിക',
@@ -349,6 +356,7 @@ const BN: Pack = {
     sheetBanner: 'ডাক্তারের শিট — প্রিন্টের জন্য প্রস্তুত। শুধু তথ্যের জন্য, রোগ নির্ণয় নয়। সঠিক মান ও সীমা ডাক্তারের জন্য ইংরেজিতে রাখা হয়েছে।',
     forFamily: (l) => `পরিবারের জন্য (${l})`,
     questionsToAsk: 'জিজ্ঞাসা করার প্রশ্ন',
+    mainConcern: 'আজ আমার প্রধান চিন্তা:', testDate: 'পরীক্ষার তারিখ:',
     checklist: 'চেকলিস্ট',
     bringSheet: 'এই শিটটি সঙ্গে আনুন',
     bringMeds: 'আপনার ওষুধের তালিকা সঙ্গে আনুন',
@@ -413,6 +421,7 @@ const MR: Pack = {
     sheetBanner: 'डॉक्टर शीट — प्रिंटसाठी तयार. फक्त माहितीसाठी, निदान नाही. अचूक मूल्ये आणि मर्यादा डॉक्टरांसाठी इंग्रजीत आहेत.',
     forFamily: (l) => `कुटुंबासाठी (${l})`,
     questionsToAsk: 'विचारायचे प्रश्न',
+    mainConcern: 'आज माझी मुख्य काळजी:', testDate: 'चाचणीची तारीख:',
     checklist: 'चेकलिस्ट',
     bringSheet: 'ही शीट सोबत आणा',
     bringMeds: 'तुमच्या औषधांची यादी सोबत आणा',
@@ -469,6 +478,7 @@ const EN_UI: Ui = {
   summaryHeading: 'Summary — what matters most', resultsHeading: 'Your results, in plain language',
   sheetBanner: 'Doctor sheet — ready to print. Information only, never a diagnosis. Exact values and ranges are kept in English for the doctor.',
   forFamily: (l) => `For the family (${l})`, questionsToAsk: 'Questions to ask',
+  mainConcern: 'My main concern today:', testDate: 'Date of test:',
   checklist: 'Checklist', bringSheet: 'Bring this sheet', bringMeds: 'Bring your medicine list', bringPrevious: 'Bring any previous reports', doctorAnswers: "Doctor's answers",
   notMeanTitle: 'What this does NOT mean:', notMeanBody: 'One high or low value on its own is not a diagnosis. Only your doctor can interpret it in context. If you feel unwell, seek care promptly. This tool cannot assess urgency.',
   infoOnly: 'Information only, never a diagnosis',
