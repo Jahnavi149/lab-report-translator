@@ -273,3 +273,16 @@ body.contrast .crop-dialog { background: #fff; color: #000; border: 2px solid #0
 body.contrast .ai-sees pre { background: #fff; color: #000; border: 2px solid #000; }
 
 .ai-photo { display: block; max-width: min(100%, 420px); height: auto; border: 1px solid var(--border, #d0d7de); border-radius: 8px; margin: 0.5rem 0; }
+
+/* ---- Voice questions ---- */
+button.mic-btn { gap: 8px; }
+button.mic-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+button.mic-btn.listening { background: #c62828; color: #fff; border-color: #c62828; animation: mic-pulse 1.2s ease-out infinite; }
+button.mic-btn.thinking, button.mic-btn.speaking { background: #e8f4f3; border-color: #0e9f97; }
+@keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(198, 40, 40, .55); } 100% { box-shadow: 0 0 0 16px rgba(198, 40, 40, 0); } }
+.voice-panel { margin: 6px 0 10px; }
+.voice-panel p { margin: 6px 0; }
+.voice-answer { border: 1px solid #b8d8d6; background: #f4fbfa; border-radius: 12px; padding: 10px 14px; margin-top: 8px; }
+.voice-note { background: #eef5ff; border-left: 4px solid #1d6fb8; border-radius: 8px; padding: 8px 12px; font-size: .95rem; }
+body.contrast button.mic-btn.listening { background: #000; color: #fff; border-color: #000; }
+body.contrast .voice-answer, body.contrast .voice-note { background: #fff; border: 2px solid #000; color: #000; }

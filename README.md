@@ -23,6 +23,10 @@ Built with Next.js 14, TypeScript and plain CSS. No database, no accounts, nothi
 - **Per-row "Needs review"** with the reason, shown wherever confidence is low.
 - Synthetic samples only. No real patient data is in this repo.
 
+## Voice questions (4 guided intents, no open chat)
+
+On the results page, **Ask by voice** takes one spoken question about the loaded report and answers out loud and in text. It understands exactly four things: *explain a result* ("What does my hemoglobin mean?": one sentence with the test, value, unit, printed range and the code-computed direction), *read the summary* (the existing 3 lines, unchanged), *rephrase a doctor question in simpler words* ("What does the second doctor question mean?": it never answers it), and *navigate* ("Take me to the doctor sheet", "Switch to Telugu"). **Everything else, and anything about what to do, seriousness, diet, supplements, medication, diagnosis or "am I okay", gets one fixed reply and no answer:** "I can only explain what's printed on your report. For anything about what to do, please ask your doctor — I can help you write the question down." (the page also shows a small "this is for your doctor" note). Code (`lib/voice.ts`, keywords) picks the intent before any model is called; only the two explain intents call Muse Spark, with a prompt that forbids diagnosis, treatment, diet, supplements, risk, urgency, speculation and "you may have", and every answer must pass `lib/safety.ts` before it is spoken or shown, otherwise it is replaced by the fixed reply. The spoken question goes to Muse only inside a `<question>` block, with identifiers removed and only the structured result rows as context, and it is listed under "What the AI sees". Speech is the browser's own (`SpeechRecognition` in, `speechSynthesis` out, the same voice picker as Listen); in some browsers, such as Chrome, the browser's maker does the speech-to-text step, and this app never records or stores audio. English, Telugu, Hindi and Spanish are supported; with no microphone, no speech recognition, another interface language or no API key the button disables itself with a plain message and nothing else is affected. The Telugu, Hindi and Spanish keyword lists and button text were written for this project and have not been reviewed by a native speaker.
+
 ## How Meta's Muse Spark is used
 
 Muse Spark runs through the Meta Model API (OpenAI-compatible, `https://api.meta.ai/v1/chat/completions`, model `muse-spark-1.3`) in `lib/muse.ts`. It has six jobs, all in service of *language*, none of them decisions:
@@ -134,6 +138,7 @@ npm test      # also runs before every `npm run build`
 | Real PDF end to end | `public/sample-report.pdf` → 8 correct rows, patient name/DOB never become rows, redaction removes identifiers |
 | Privacy | 30+ adversarial identifier lines (names, DOB in several formats, MRN, phone, email, address, SSN, Aadhaar, insurance, relatives, dates inside result lines) are put through the redactor and through the whole pipeline with a mocked API; every request body is inspected for leaks ("N identifier substrings tested, 0 leaked"); every request carries only allow-listed row fields; rows are byte-identical before and after; the user-facing audit contains no identifiers; the build fails if raw text becomes accepted by a Muse function |
 | Photo cleaning (patterns) | OCR runs on six fixture photos: each cleaned photo is read again and no labelled identifier can be made out, every result row survives; refusals (blank photo, not an image); an end-to-end check on the image actually inside the Muse request body; guards that `dev`/`build` do not fetch the third-party model and the deploy does not ship it. An optional section (skipped when the evaluation model is not installed) measures recall and precision of the Stanford model |
+| Voice Q&A | The 4 intents classify correctly on sample phrasings in en/te/hi/es; 5 required adversarial questions plus 38 more (advice, diagnosis, risk, diet, supplements, medication, off-topic, injection) all return the redirect line word for word and never reach the model; every unsafe model answer (diagnosis, diet, supplement, wrong direction, invented number, urgency, speculation, two sentences, missing range) becomes the redirect line; a spoken question is redacted before it is sent; the request body is validated and the flag recomputed; no third-party speech or model service is referenced |
 | AI-output safety | Faithful sentences accepted; diagnoses, diet/supplement advice, invented numbers, contradictions of the code's flag, urgency and over-long text rejected |
 | Localized interface, sharing | Every interface string exists and is translated for te/hi/es; the "does NOT mean" box is translated; share text adds no numbers beyond the summary and questions and keeps the information-only line; the WhatsApp link round-trips the exact text |
 | Muse pipeline (mocked API) | Good output used; adversarial output dropped; HTTP 500 and 400 handled; flags/values never change; hostile text stays inside `<data>` |
@@ -147,9 +152,10 @@ The latest result is written to `public/eval-results.json`.
 ```
 Browser (app/page.tsx)
   ├─ POST /api/analyze     PDF → lib/pdftext → lib/parse → lib/flags → lib/verify
-  │                        photo → Muse vision → lib/flags (always low confidence)
+  │                        photo → lib/photo (local OCR, paint out identifiers, re-read) → Muse vision → lib/flags (always low confidence)
   │                        then lib/enhance runs the Muse jobs in parallel, each validated by lib/safety
-  └─ POST /api/translate   Muse translation, validated per item
+  ├─ POST /api/translate   Muse translation, validated per item
+  └─ POST /api/voice-ask   code picks 1 of 4 intents → (Muse writes the words for 2 of them) → lib/safety.ts → answer or fixed redirect line
 ```
 
 Uploads are checked by file signature (not filename), capped at 10 MB, and rate-limited per IP (in-memory; use a platform limiter for real production).

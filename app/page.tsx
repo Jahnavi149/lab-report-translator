@@ -11,6 +11,8 @@ import { FamilyHandout } from './FamilyHandout';
 import { ImageCitationViewer } from './ImageCitationViewer';
 import { PdfCitationViewer } from './PdfCitationViewer';
 import { PhotoCropDialog } from './PhotoCropDialog';
+import { useVoiceAsk, VoiceButton, VoicePanel } from './VoiceAsk';
+import type { VoiceAction } from '@/lib/voice';
 
 const LANG_LABEL: Record<Language, string> = { en: 'English', te: 'Telugu · తెలుగు', hi: 'Hindi · हिन्दी', es: 'Spanish · Español', ta: 'Tamil · தமிழ்', kn: 'Kannada · ಕನ್ನಡ', ml: 'Malayalam · മലയാളം', bn: 'Bengali · বাংলা', mr: 'Marathi · मराठी' };
 const VOICE_LANG: Record<Language, string> = { en: 'en-US', te: 'te-IN', hi: 'hi-IN', es: 'es-ES', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN' };
@@ -173,6 +175,17 @@ export default function Home() {
     setListening(false); setListenIdx(null);
   }
 
+  // Voice questions: the mic reuses speakItems (so voice choice per language is the same as Listen) and the page's own state.
+  function speakSummary(onDone: () => void) {
+    setListening(true);
+    void speakItems(display.summary, spokenLang, setListenIdx, () => { setListening(false); onDone(); });
+  }
+  function performVoiceAction(a: VoiceAction) {
+    if (a.type === 'language') setLanguage(a.language);
+    else if (a.type === 'navigate') { setShowDoctor(a.target === 'doctor-sheet'); setShowHandout(a.target === 'handout'); }
+  }
+  const voice = useVoiceAsk({ report, language, ui, voiceLang: VOICE_LANG[language], speak: speakItems, stopSpeaking: stopListen, speakSummary, displaySummary: display.summary, perform: performVoiceAction });
+
   // Opening or leaving a report ends any speech in progress.
   useEffect(() => { stopListen(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
@@ -246,11 +259,13 @@ export default function Home() {
             <h2 id="report-title" style={{ marginTop: 18 }}>{report.title} {report.is_synthetic && <span className="pill">SYNTHETIC</span>}</h2>
             <div className="actions-primary no-print">
               <button className="primary big" onClick={listening ? stopListen : listen}>{listening ? `⏹ ${ui.stopListenBtn}` : `🔊 ${ui.listenBtn}`}</button>
+              <VoiceButton v={voice} ui={ui} />
               <button className="big" onClick={() => setShowDoctor(true)}>🖨 {ui.doctorSheetBtn}</button>
               <button className="big" onClick={() => setShowHandout(true)}>🔠 {ui.handoutBtn}</button>
               <a className="linkbtn big" href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer">💬 {ui.whatsappBtn}</a>
             </div>
-            {report.ai_input && <AiSees input={report.ai_input} />}
+            <VoicePanel v={voice} ui={ui} />
+            {report.ai_input && <AiSees input={report.ai_input} voice={voice.exchanges} />}
             {translationNotice && <p className="muted" role="status">{translationNotice}</p>}
             {!report.verification_passed && <div className="warn">{report.verification_note}</div>}
             {reviewCount > 0 && <div className="warn">{reviewCount} test(s) below are marked <strong>Needs review</strong>. Please check them against your original report.</div>}

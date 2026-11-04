@@ -111,3 +111,27 @@ export interface TranslatedReport {
   questions: (string | null)[];
   explanations: Record<string, string>;
 }
+
+/** One spoken question and its answer, kept in the browser for the "What the AI sees" panel (counts and text, never audio). */
+export interface VoiceExchange {
+  question: string;
+  answer: string;
+  intent: string;
+  redirected: boolean;
+  /** The question text reached Muse (only explain-result and explain-question do this). */
+  sent_to_ai: boolean;
+  /** Exactly what was sent, after identifiers were removed. */
+  question_sent?: string;
+}
+
+/** One spoken question and its answer, kept in the browser for the "What the AI sees" panel (counts and text, never audio). */
+export interface VoiceExchange {
+  question: string;
+  answer: string;
+  intent: string;
+  redirected: boolean;
+  /** The question text reached Muse (only explain-result and explain-question do this). */
+  sent_to_ai: boolean;
+  /** Exactly what was sent, after identifiers were removed. */
+  question_sent?: string;
+}

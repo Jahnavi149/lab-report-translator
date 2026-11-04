@@ -3,7 +3,7 @@ import { explanationIsSafe, questionIsSafe, sanitizeTestName, summaryIsSafe, tra
 import { priorityRows } from './flags';
 import { parseLabText } from './parse';
 import type { MuseCheckItem } from './privacy';
-import type { Language, MuseSafeRow, RedactedPhoto } from './types';
+import type { Language, MuseSafeLine, MuseSafeRow, RedactedPhoto } from './types';
 
 // Meta Model API (OpenAI-compatible chat completions) with Muse Spark.
 //   META_MODEL_API_KEY  required for any Muse call (alias: MODEL_API_KEY)
@@ -175,6 +175,15 @@ export async function translateWithMuse(payload: { summary: string[]; questions:
     if (translationIsSafe(v, t)) explanations[k] = t.trim();
   }
   return { summary: pick(payload.summary, parsed.summary), questions: pick(payload.questions, parsed.questions), explanations };
+}
+
+// 7. Voice: Muse writes the words of one answer. Typed like every other call: only safe rows and a redacted line can go in,
+// so the spoken question (MuseSafeLine) and the report context (MuseSafeRow[]) are the whole input. `system` is fixed code text.
+export async function answerVoiceWithMuse(args: { system: string; question: MuseSafeLine; rows: MuseSafeRow[]; doctorQuestion?: MuseSafeLine }): Promise<{ english: unknown; translated: unknown }> {
+  const data = { ...(args.doctorQuestion ? { doctor_question: args.doctorQuestion } : {}), rows: rowsPayload(args.rows) };
+  const user = `<question>${JSON.stringify(args.question)}</question><data>${JSON.stringify(data)}</data>`;
+  const parsed = extractJson(await callMuse([{ role: 'system', content: args.system }, { role: 'user', content: user }])) as { english?: unknown; translated?: unknown };
+  return { english: parsed.english, translated: parsed.translated };
 }
 
 // 6. Vision: read a photo of a report. Rows from here are always low confidence until the user checks them.

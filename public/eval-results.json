@@ -1,6 +1,6 @@
 {
-  "passed": 356,
-  "total": 356,
+  "passed": 414,
+  "total": 414,
   "groups": [
     {
       "name": "Flag engine (code decides)",
@@ -63,10 +63,15 @@
       "total": 40
     },
     {
-      "name": "Optional evaluation model (Stanford de-identifier; off in the app)",
-      "passed": 15,
-      "total": 15
+      "name": "Optional evaluation model: SKIPPED (not installed; opt in with npm run models)",
+      "passed": 0,
+      "total": 0
+    },
+    {
+      "name": "Voice Q&A: four guided intents, a redirect for everything else (mocked Muse, no network)",
+      "passed": 73,
+      "total": 73
     }
   ],
-  "generated_at": "2026-11-03T21:56:36.336Z"
+  "generated_at": "2026-11-04T03:10:10.899Z"
 }
