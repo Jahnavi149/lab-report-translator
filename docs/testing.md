@@ -3,7 +3,7 @@
 [← Back to README](../README.md)
 
 ```bash
-npm test      # 587 checks; also runs before every `npm run build`
+npm test      # 598 checks; also runs before every `npm run build`
 ```
 
 [`scripts/evaluate.mjs`](../scripts/evaluate.mjs) runs the real `lib/` modules, the real sample PDF, real OCR on fixture photos and a mocked Meta API. No key or network needed.

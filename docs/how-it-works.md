@@ -27,7 +27,7 @@ Muse never gets the last word on a number. For a PDF, the extracted value, unit 
 
 ## Flags are decided by code
 
-`lib/flags.ts` compares the value with the printed range. If a test prints several conflicting ranges, the row is **Needs review**. Nothing is guessed.
+`lib/flags.ts` compares the value with the printed range, and a numeric range always wins. If a report prints no range but explicitly prints a verdict word (High, Low, Normal), that printed word is used and the row is marked as flagged by the report, never by colour or layout. If a test prints several conflicting ranges, or a value cannot be read, the row is **Needs review** and can be opened for approval or rejection. Nothing is guessed.
 
 ## Every Muse sentence is checked
 
