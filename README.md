@@ -6,7 +6,9 @@ My parents speak Telugu and couldn't make sense of their own lab reports, so I b
 
 > **Information only, never a diagnosis.** This app does not diagnose, recommend treatment, assess risk or give medical advice. It repeats what the report prints, says whether a value is inside or outside the *printed* range, and lists questions to ask a doctor.
 
-**[Demo video](TODO)**: it opens with a statement of what existed before the event and what was built during it (see [Build disclosure](#build-disclosure)).
+**[Demo video](TODO)** · **[Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)**
+
+The video opens with a statement of what existed before the event and what was built during it (see [Build disclosure](#build-disclosure)). The live app has a Muse key configured, so photo reading, translation and voice work there.
 
 ## What it does
 
@@ -71,9 +73,9 @@ cp .env.example .env.local     # then add your key
 npm run dev                    # http://localhost:3000
 ```
 
-Set `META_MODEL_API_KEY` in `.env.local` (get a key at dev.meta.ai; never commit it, `.env.example` documents every variable). Node 18.17 or newer.
+Set `META_MODEL_API_KEY` in `.env.local`. Get a key at dev.meta.ai and use your own; never commit one. `.env.example` documents every variable. Node 18.17 or newer.
 
-- **Without a key,** the PDF flow still works with code-written sentences. Photo reading, translation and voice need a key.
+- **Without a key,** the PDF flow still runs on code-written sentences. Photo reading, translation and voice need a key.
 - **Slow host?** Raise `MUSE_TIMEOUT_MS` (default 45000 ms; vision calls 55000).
 - Click **Try an example report** to see everything on a synthetic sample.
 
