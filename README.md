@@ -10,7 +10,7 @@ My parents speak Telugu and couldn't make sense of their own lab reports, so I b
 
 ## Test it in two minutes
 
-You need nothing but a browser. Pick **A (live link)** or **B (run it yourself)**. Both use the same sample files.
+Pick **A (live link, only a browser needed)** or **B (run it on your computer)**. Both use the same sample files.
 
 ### Step 1: get the sample files
 
