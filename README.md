@@ -8,6 +8,61 @@ My parents speak Telugu and couldn't make sense of their own lab reports, so I b
 
 > **Information only, never a diagnosis.** The app repeats what the report prints and says whether a value is inside or outside the *printed* range. It never diagnoses, advises treatment or assesses risk.
 
+## Test it in two minutes
+
+You need nothing but a browser. Pick **A (live link)** or **B (run it yourself)**. Both use the same sample files.
+
+### Step 1: get the sample files
+
+All sample files are invented (no real patient). They live in the [`samples/`](samples) folder of this repository.
+
+| File | Upload it to see |
+|---|---|
+| [`01-two-page-report.pdf`](samples/01-two-page-report.pdf) | **Start here.** A realistic two-page report: 18 results with source citations, identifiers removed before the AI sees the text |
+| [`02-french-decimal-commas.pdf`](samples/02-french-decimal-commas.pdf) | A French report with `11,2` decimal commas |
+| [`03-flags-without-ranges.pdf`](samples/03-flags-without-ranges.pdf) | Results that print only the words High or Low |
+| [`04-phone-photo.jpg`](samples/04-phone-photo.jpg) | A tilted, shadowed phone photo: the trim step appears and every row is marked *Needs review* |
+| [`05-scanned-no-text.pdf`](samples/05-scanned-no-text.pdf) | A picture-only PDF: a polite message asking for an image instead |
+| [`06-not-a-lab-report.pdf`](samples/06-not-a-lab-report.pdf) | A pancake recipe: a polite message that no lab results were found |
+
+Full details of what each file should show: [`samples/README.md`](samples/README.md).
+
+**How to download them**
+- **Whole folder:** on GitHub press **Code → Download ZIP** and open the `samples` folder, or run `git clone https://github.com/Jahnavi149/lab-report-translator.git` and open `samples/`. If you run it yourself (option B) they are already on your computer.
+- **One file:** click the file in the table above, then press the **download** button (the down-arrow icon at the top right of the file page).
+- **No download at all:** the app has a **Try an example report** button that loads a built-in sample report instantly.
+
+### Step 2A: use the live app (nothing to install)
+
+1. Open **[the live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)**. The Meta key is already configured.
+2. Press **Try an example report**, or drag a file from `samples/` onto the page (or press **Choose your report**).
+3. Pick a language from the **Language** menu at any time. The results, summary, doctor questions and every message switch language.
+
+### Step 2B: run it on your computer
+
+You need **Node 18.17 or newer** ([nodejs.org](https://nodejs.org)) and, to read your own uploads, a **Meta Model API key**.
+
+```bash
+git clone https://github.com/Jahnavi149/lab-report-translator.git
+cd lab-report-translator
+npm install
+cp .env.example .env.local     # then open .env.local and replace <META_API_KEY> with your Meta Model API key
+npm run dev                    # open http://localhost:3000
+```
+
+- **Without a key** the app still runs, but only the built-in **Try an example report** works; reading PDFs and photos needs the Meta key.
+- **To check the code without a key or network:** `npm test` runs 739 offline checks. `npm run typecheck` checks types. `npm run build && npm start` runs the production build.
+- **To rebuild the sample files** (macOS): `npm run samples`.
+
+### Step 3: what to try
+
+1. Upload `01-two-page-report.pdf`. Click **View** on a result: the PDF opens with the source line highlighted (page 2 results open on page 2).
+2. Open **What the AI sees** to check exactly what was sent. Name, ID, birth date and phone number are gone.
+3. Change the language. Try Telugu, Arabic (right-to-left) or French.
+4. Press **Doctor sheet** for the printable one-page sheet, or **Large-print handout** for the big-text version.
+5. Upload `04-phone-photo.jpg`. Use the trim step, then click a **Needs review** chip to compare a row with the photo and approve it.
+6. Press **Ask by voice** (the microphone) and say "What does my hemoglobin mean?" (needs the Meta key).
+
 ## What it does
 
 - **PDF or photo in, plain-language rows out.** Exact value, unit and printed range per test, with the flag worked out by code.
@@ -57,18 +112,6 @@ A **What the AI sees** panel on the results page shows exactly what was sent, in
 ## Ask by voice
 
 Press the microphone and ask one short question, in any of the 15 languages. It understands four things: **explain a result**, **read the summary**, **rephrase a doctor question**, and **navigate** ("take me to the doctor sheet", "switch to French"). Code picks the intent before any model is called. Anything about what to do gets one fixed reply: ask your doctor. → [Voice](docs/voice.md)
-
-## Try it
-
-```bash
-npm install && cp .env.example .env.local   # put your own Meta Model API key in .env.local
-npm run dev                                 # http://localhost:3000
-# then click "Try an example report"
-```
-
-Or skip setup and use the [live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/). Node 18.17+. PDF and photo reading use your Meta key; without one the app shows the example report only.
-
-**Sample files to upload** (all invented, no real patient): [`samples/`](samples/README.md) has a two-page report, a French report with decimal commas, flag-only results, a phone-style photo, a scan and a non-lab PDF, each with what it shows and what to expect.
 
 ## Tests
 
