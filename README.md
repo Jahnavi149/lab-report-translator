@@ -1,6 +1,6 @@
 # Lab Report Translator
 
-**[▶ Demo video](TODO)** · **[🌐 Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)** (Meta key already configured, nothing to set up)
+**[▶ Demo video](https://youtu.be/tvqLPJJHpXA)** · **[🌐 Live app](https://lab-report-translator-chu4l7oeaa-el.a.run.app/)** (Meta key already configured, nothing to set up)
 
 **Upload a lab report (PDF or photo). Get every result in plain words, in your family's language, plus a one-page sheet for the doctor.**
 
